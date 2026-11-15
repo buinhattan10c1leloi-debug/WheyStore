@@ -192,3 +192,10 @@ class Phase5DAdminManagementTests(TestCase):
         self.assertRedirects(resp, reverse('dashboard_products'))
         self.prod.refresh_from_db()
         self.assertFalse(self.prod.available)
+
+
+class Phase5EDeployAndHealthTests(TestCase):
+    def test_health_check_endpoint(self):
+        resp = self.client.get(reverse('health_check'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json()['status'], 'ok')

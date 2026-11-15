@@ -854,6 +854,14 @@ def dashboard_audit_logs(request):
     return render(request, 'shop/dashboard/audit_logs.html', {'logs': logs})
 
 
+def health_check(request):
+    """Healthcheck endpoint cho Docker / load balancer."""
+    from django.db import connection
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT 1")
+    return JsonResponse({'status': 'ok', 'service': 'wheystore'})
+
+
 def robots_txt(request):
     """
     Serve robots.txt following claude-seo technical crawlability & AI crawler standards.

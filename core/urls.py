@@ -13,6 +13,7 @@ sitemaps = {
 }
 
 urlpatterns = [
+    path('health/', shop_views.health_check, name='health_check'),
     path('admin/', admin.site.urls),
     path('robots.txt', shop_views.robots_txt, name='robots_txt'),
     path(
