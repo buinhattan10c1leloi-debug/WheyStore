@@ -81,15 +81,25 @@
                 <span class="logo-icon">&#9889;</span>
                 <span>Whey<span class="accent">Store</span></span>
             </a>
-            <ul class="nav-links">
+            <button type="button" class="mobile-menu-toggle" id="mobile-menu-toggle" aria-label="Mở menu điều hướng" aria-expanded="false">
+                &#9776;
+            </button>
+            <ul class="nav-links" id="main-nav-links">
                 <li class="nav-item">
                     <a href="{% url 'shop:product_list' %}">Sản Phẩm</a>
                 </li>
                 <li class="nav-item">
-                    <a href="{% url 'shop:product_list' %}#macro-calculator">Tính Macro &amp; TDEE</a>
+                    <a href="{% url 'shop:product_list' %}#macro-calculator">Tính Macro</a>
                 </li>
                 <li class="nav-item">
-                    <a href="{% url 'orders:order_track' %}">Tra cứu đơn hàng</a>
+                    <a href="{% url 'orders:order_track' %}">Tra cứu đơn</a>
+                </li>
+                <li class="nav-item">
+                    {% if user.is_authenticated %}
+                        <a href="{% url 'orders:my_orders' %}">Đơn của tôi</a>
+                    {% else %}
+                        <a href="{% url 'orders:customer_login' %}">Đăng nhập</a>
+                    {% endif %}
                 </li>
                 <li class="nav-item">
                     {% with total_items=cart|length %}

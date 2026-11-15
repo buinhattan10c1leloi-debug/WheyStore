@@ -1,5 +1,8 @@
+import uuid
 from decimal import Decimal
 from django.db import models
+from django.conf import settings
+from django.utils import timezone
 from django.core.validators import MinValueValidator, MaxValueValidator
 from shop.models import Product
 
@@ -11,6 +14,19 @@ class Coupon(models.Model):
         default=10,
         verbose_name="Phần trăm giảm giá (%)"
     )
+    valid_from = models.DateTimeField(null=True, blank=True, verbose_name="Hiệu lực từ")
+    valid_to = models.DateTimeField(null=True, blank=True, verbose_name="Hiệu lực đến")
+    min_order_amount = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0,
+        verbose_name="Đơn tối thiểu (VNĐ)"
+    )
+    max_uses = models.PositiveIntegerField(
+        default=0,
+        verbose_name="Số lượt dùng tối đa (0 = không giới hạn)"
+    )
+    used_count = models.PositiveIntegerField(default=0, verbose_name="Đã sử dụng")
     active = models.BooleanField(default=True, verbose_name="Đang kích hoạt")
     created = models.DateTimeField(auto_now_add=True, verbose_name="Ngày tạo")
 
@@ -21,6 +37,22 @@ class Coupon(models.Model):
 
     def __str__(self):
         return f"{self.code} (-{self.discount_percent}%)"
+
+    def validate_for_order(self, order_amount=None):
+        """Kiểm tra đầy đủ điều kiện hiệu lực coupon. Trả về (is_valid, error_message)."""
+        now = timezone.now()
+        if not self.active:
+            return False, "Mã giảm giá hiện đang tạm ngưng."
+        if self.valid_from and now < self.valid_from:
+            return False, "Mã giảm giá chưa đến thời gian áp dụng."
+        if self.valid_to and now > self.valid_to:
+            return False, "Mã giảm giá đã hết hạn sử dụng."
+        if self.max_uses > 0 and self.used_count >= self.max_uses:
+            return False, "Mã giảm giá đã hết lượt sử dụng."
+        if order_amount is not None and Decimal(order_amount) < self.min_order_amount:
+            min_fmt = f"{int(self.min_order_amount):,}".replace(",", ".")
+            return False, f"Mã '{self.code}' yêu cầu đơn hàng tối thiểu {min_fmt}đ."
+        return True, None
 
 
 class Order(models.Model):
@@ -37,6 +69,22 @@ class Order(models.Model):
         ('CANCELLED', 'Đã hủy'),
     ]
 
+    ALLOWED_TRANSITIONS = {
+        'PENDING': {'PAID', 'SHIPPING', 'CANCELLED'},
+        'PAID': {'SHIPPING', 'CANCELLED'},
+        'SHIPPING': {'COMPLETED', 'CANCELLED'},
+        'COMPLETED': set(),
+        'CANCELLED': {'PENDING'},
+    }
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name='orders',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        verbose_name="Tài khoản khách hàng"
+    )
     full_name = models.CharField(max_length=150, verbose_name="Họ và tên")
     phone = models.CharField(max_length=20, verbose_name="Số điện thoại")
     email = models.EmailField(blank=True, null=True, verbose_name="Email (không bắt buộc)")
@@ -73,11 +121,27 @@ class Order(models.Model):
         default=0,
         verbose_name="Số tiền được giảm (VNĐ)"
     )
+    shipping_fee = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0,
+        verbose_name="Phí vận chuyển (VNĐ)"
+    )
     total_amount = models.DecimalField(
         max_digits=12,
         decimal_places=2,
         default=0,
         verbose_name="Tổng thanh toán (VNĐ)"
+    )
+    access_token = models.UUIDField(
+        default=uuid.uuid4,
+        unique=True,
+        editable=False,
+        verbose_name="Mã truy cập bảo mật"
+    )
+    stock_deducted = models.BooleanField(
+        default=True,
+        verbose_name="Đã trừ tồn kho"
     )
     created = models.DateTimeField(auto_now_add=True, verbose_name="Ngày đặt hàng")
     updated = models.DateTimeField(auto_now=True, verbose_name="Cập nhật lần cuối")
@@ -112,6 +176,32 @@ class Order(models.Model):
             f"https://img.vietqr.io/image/MB-0123456789-compact2.png"
             f"?amount={amount_int}&addInfo=WHEYSTORE%20DH{self.id}&accountName=WHEYSTORE"
         )
+
+    def can_transition_to(self, new_status: str) -> bool:
+        if new_status == self.status:
+            return True
+        return new_status in self.ALLOWED_TRANSITIONS.get(self.status, set())
+
+
+class OrderStatusLog(models.Model):
+    order = models.ForeignKey(
+        Order,
+        related_name='status_logs',
+        on_delete=models.CASCADE,
+        verbose_name="Đơn hàng"
+    )
+    status = models.CharField(max_length=15, choices=Order.STATUS_CHOICES, verbose_name="Trạng thái")
+    changed_by = models.CharField(max_length=150, default='Hệ thống', verbose_name="Người thực hiện")
+    note = models.CharField(max_length=255, blank=True, verbose_name="Ghi chú")
+    created = models.DateTimeField(auto_now_add=True, verbose_name="Thời gian")
+
+    class Meta:
+        ordering = ['created']
+        verbose_name = 'Lịch sử trạng thái đơn'
+        verbose_name_plural = 'Lịch sử trạng thái đơn'
+
+    def __str__(self):
+        return f"#DH{self.order_id} -> {self.status} ({self.changed_by})"
 
 
 class OrderItem(models.Model):

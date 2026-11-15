@@ -17,16 +17,21 @@
         <span class="accent">Đơn Hàng</span>
     </h1>
     <p style="color: var(--text-secondary); font-size: 0.95rem;">
-        Nhập <strong>Số điện thoại</strong> đặt hàng hoặc <strong>Mã đơn hàng</strong> (ví dụ: <code>1</code>, <code>#1</code>, <code>DH1</code>) để kiểm tra tiến độ giao hàng và thanh toán.
+        Nhập <strong>Mã đơn hàng</strong> (ví dụ: <code>#1</code>, <code>DH1</code>) kèm <strong>Số điện thoại đặt hàng</strong> (hoặc dán mã UUID đơn hàng) để bảo mật thông tin và kiểm tra tiến độ.
     </p>
 
-    <form action="{% url 'orders:order_track' %}" method="get" class="track-search-form">
+    <form action="{% url 'orders:order_track' %}" method="get" class="track-search-form" style="display: grid; grid-template-columns: 1fr 1fr auto; gap: 12px;">
         <input type="text"
                name="q"
                value="{{ query }}"
                class="fitness-input"
-               placeholder="Nhập Số điện thoại (VD: 0987654321) hoặc Mã đơn hàng (VD: #1, DH1)..."
+               placeholder="Mã đơn hàng (VD: #1, DH1) hoặc UUID..."
                required>
+        <input type="text"
+               name="phone"
+               value="{{ phone }}"
+               class="fitness-input"
+               placeholder="Số điện thoại đặt hàng (VD: 0987654321)...">
         <button type="submit" class="btn-buy btn-large" style="white-space: nowrap; justify-content: center;">
             <span>&#128269; Kiểm Tra Ngay</span>
         </button>
@@ -60,7 +65,7 @@
                     <span style="font-size: 1.3rem; font-weight: 900; color: var(--accent-red);">
                         {{ order.total_amount|floatformat:0 }} VNĐ
                     </span>
-                    <a href="{% url 'orders:order_success' order.id %}" class="btn-buy" style="padding: 7px 14px; font-size: 0.78rem;">
+                    <a href="{% url 'orders:order_success' order.access_token %}" class="btn-buy" style="padding: 7px 14px; font-size: 0.78rem;">
                         {% if order.payment_method == 'BANK' %}
                             <span>&#9889; Chi Tiết & Mã VietQR</span>
                         {% else %}
@@ -69,6 +74,28 @@
                     </a>
                 </div>
             </div>
+
+            <!-- Progress Stepper -->
+            {% if order.status != 'CANCELLED' %}
+            <div class="checkout-stepper" style="margin-bottom: 18px;">
+                <div class="step-item {% if order.status == 'PENDING' %}active{% else %}done{% endif %}">
+                    <span class="step-num">1</span>
+                    <span>Chờ xác nhận</span>
+                </div>
+                <div class="step-item {% if order.status == 'PAID' %}active{% elif order.status == 'SHIPPING' or order.status == 'COMPLETED' %}done{% endif %}">
+                    <span class="step-num">2</span>
+                    <span>Đã thanh toán</span>
+                </div>
+                <div class="step-item {% if order.status == 'SHIPPING' %}active{% elif order.status == 'COMPLETED' %}done{% endif %}">
+                    <span class="step-num">3</span>
+                    <span>Đang giao hàng</span>
+                </div>
+                <div class="step-item {% if order.status == 'COMPLETED' %}done{% endif %}">
+                    <span class="step-num">4</span>
+                    <span>Hoàn thành</span>
+                </div>
+            </div>
+            {% endif %}
 
             <!-- Customer Summary -->
             <div class="specs-panel" style="margin-bottom: 18px; padding: 14px 18px;">
@@ -118,6 +145,33 @@
                     </tbody>
                 </table>
             </div>
+
+            {% if order.status_logs.all %}
+            <div style="margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border-color);">
+                <strong style="display: block; margin-bottom: 8px; font-size: 0.9rem;">Lịch sử trạng thái đơn hàng:</strong>
+                <ul style="list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; font-size: 0.85rem; color: var(--text-secondary);">
+                    {% for log in order.status_logs.all %}
+                    <li>
+                        <span style="color: var(--accent-red); font-weight: 700;">{{ log.created_at|date:"d/m/Y H:i" }}</span>
+                        &mdash; {{ log.get_status_display }}
+                        {% if log.note %}({{ log.note }}){% endif %}
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            {% if order.payment_method == 'BANK' and order.status == 'PENDING' %}
+            <div style="margin-top: 16px; padding: 14px; background: var(--bg-surface-elevated); border: 1px dashed var(--accent-red); border-radius: 8px; display: flex; flex-wrap: wrap; align-items: center; gap: 16px;">
+                <img src="{{ order.vietqr_url }}" alt="Mã VietQR thanh toán đơn #{{ order.id }}" style="width: 140px; height: 140px; border-radius: 6px; background: #fff; padding: 4px;">
+                <div>
+                    <strong style="color: var(--text-primary); display: block; margin-bottom: 4px;">Thanh toán nhanh qua VietQR</strong>
+                    <p style="font-size: 0.85rem; color: var(--text-secondary); margin: 0 0 6px 0;">
+                        Số tiền: <strong>{{ order.total_amount|floatformat:0 }}đ</strong> &bull; Nội dung: <strong>WHEYSTORE DH{{ order.id }}</strong>
+                    </p>
+                </div>
+            </div>
+            {% endif %}
         </article>
         {% endfor %}
     {% else %}

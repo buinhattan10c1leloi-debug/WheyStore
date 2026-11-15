@@ -2611,3 +2611,186 @@ img {
     margin-top: 2px;
 }
 
+/* ==========================================================================
+   Phase 3: Mobile Drawer, 44px Touch Targets, Toast, Search Suggest & Stepper
+   ========================================================================== */
+.btn-buy,
+.btn-secondary,
+.btn-quick-status,
+.mobile-menu-toggle,
+.nav-item a {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+}
+
+.mobile-menu-toggle {
+    display: none;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    font-size: 1.4rem;
+    padding: 6px 12px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+}
+
+@media (max-width: 900px) {
+    .mobile-menu-toggle {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .nav-links {
+        position: fixed;
+        top: 72px;
+        right: -100%;
+        width: 270px;
+        height: calc(100vh - 72px);
+        background-color: var(--bg-secondary);
+        border-left: 2px solid var(--accent-red);
+        flex-direction: column;
+        align-items: stretch;
+        padding: 20px;
+        gap: 10px;
+        transition: right 0.25s ease;
+        z-index: 999;
+        overflow-y: auto;
+    }
+
+    .nav-links.open {
+        right: 0;
+    }
+}
+
+.whey-toast-container {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-width: 360px;
+}
+
+.whey-toast {
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--accent-red);
+    border-left: 4px solid var(--accent-red);
+    color: var(--text-primary);
+    padding: 14px 18px;
+    border-radius: var(--radius-md);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.7);
+    font-size: 0.9rem;
+    font-weight: 700;
+}
+
+.whey-toast.toast-success {
+    border-color: #34d399;
+    border-left-color: #34d399;
+}
+
+.search-suggest-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-top: none;
+    border-radius: 0 0 var(--radius-md) var(--radius-md);
+    box-shadow: var(--shadow-card);
+    z-index: 200;
+    display: none;
+}
+
+.search-suggest-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 0.88rem;
+}
+
+.search-suggest-item:hover {
+    background-color: var(--bg-card-hover);
+}
+
+.checkout-stepper {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 28px;
+}
+
+.stepper-step {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    text-align: center;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--text-muted);
+}
+
+.stepper-step.active {
+    border-color: var(--accent-red);
+    color: var(--text-primary);
+    background: rgba(211, 63, 73, 0.16);
+}
+
+.pagination-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 28px;
+    flex-wrap: wrap;
+}
+
+.pagination-bar a,
+.pagination-bar span {
+    padding: 8px 14px;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    border-radius: var(--radius-sm);
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    font-weight: 700;
+    font-size: 0.88rem;
+}
+
+.pagination-bar .current-page {
+    background-color: var(--accent-red);
+    border-color: var(--accent-red);
+    color: #fff;
+}
+
+.star-picker {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.star-btn {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    color: var(--text-muted);
+    font-size: 1.35rem;
+    min-width: 44px;
+    min-height: 44px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+}
+
+.star-btn.active {
+    color: #fbbf24;
+    border-color: #fbbf24;
+}
+
+

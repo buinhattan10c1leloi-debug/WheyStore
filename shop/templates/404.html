@@ -1,0 +1,10 @@
+{% extends "shop/base.html" %}
+{% block title %}Không Tìm Thấy Trang (404) | WheyStore{% endblock %}
+{% block content %}
+<div class="empty-box" style="max-width: 620px; margin: 48px auto; padding: 48px 28px;">
+    <div class="empty-icon" style="font-size: 4rem;">404</div>
+    <h1 style="font-size: 1.6rem; font-weight: 900; margin-bottom: 10px;">TRANG KHÔNG TỒN TẠI</h1>
+    <p style="margin-bottom: 24px;">Đường dẫn bạn tìm kiếm không tồn tại hoặc sản phẩm đã được chuyển sang mục khác.</p>
+    <a href="{% url 'shop:product_list' %}" class="btn-buy btn-large">Quay Lại Trang Chủ WheyStore</a>
+</div>
+{% endblock %}

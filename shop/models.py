@@ -1,6 +1,6 @@
 import re
 from django.db import models
-from django.db.models import Avg
+from django.db.models import Avg, Count
 from django.urls import reverse
 from django.core.validators import MinValueValidator, MaxValueValidator
 
@@ -72,6 +72,8 @@ class Product(models.Model):
         indexes = [
             models.Index(fields=['id', 'slug']),
             models.Index(fields=['name']),
+            models.Index(fields=['brand']),
+            models.Index(fields=['price']),
             models.Index(fields=['-created']),
         ]
         verbose_name = 'Sản phẩm'
@@ -158,11 +160,17 @@ class Product(models.Model):
 
     @property
     def average_rating(self):
+        annotated = getattr(self, 'annotated_avg_rating', None)
+        if annotated is not None:
+            return round(float(annotated), 1)
         avg = self.reviews.aggregate(avg_rating=Avg('rating'))['avg_rating']
-        return round(avg, 1) if avg else 5.0
+        return round(avg, 1) if avg else 0.0
 
     @property
     def review_count(self):
+        annotated = getattr(self, 'annotated_review_count', None)
+        if annotated is not None:
+            return int(annotated)
         return self.reviews.count()
 
 
@@ -183,7 +191,7 @@ class Review(models.Model):
         verbose_name="Đánh giá (1-5 sao)"
     )
     comment = models.TextField(verbose_name="Nhận xét chi tiết")
-    verified_purchase = models.BooleanField(default=True, verbose_name="Đã mua hàng xác thực")
+    verified_purchase = models.BooleanField(default=False, verbose_name="Đã mua hàng xác thực")
     created = models.DateTimeField(auto_now_add=True, verbose_name="Ngày đánh giá")
 
     class Meta:

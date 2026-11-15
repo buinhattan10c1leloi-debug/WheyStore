@@ -174,12 +174,14 @@
 
         <!-- 2. Thanh Tìm Kiếm, Bộ Lọc Khoảng Giá & Sắp Xếp Trực Tiếp (Live Filter + GSAP Flip) -->
         <div class="live-filter-toolbar" id="live-filter-bar">
-            <div class="filter-search-col">
+            <div class="filter-search-col" style="position: relative;">
                 <input type="text"
                        id="live-search-input"
                        value="{{ search_query }}"
                        class="fitness-input"
+                       autocomplete="off"
                        placeholder="&#128269; Tìm nhanh theo tên Whey, Thương hiệu hoặc mùi vị (VD: Rule 1, Dymatize, OstroVit, Chocolate)...">
+                <div id="search-suggest-box" class="search-suggest-dropdown"></div>
             </div>
             <div class="filter-select-col">
                 <select id="live-price-filter" class="fitness-select">
@@ -250,9 +252,13 @@
                     </div>
 
                     <div class="card-rating-row">
-                        <span class="stars-gold">&#9733;&#9733;&#9733;&#9733;&#9733;</span>
-                        <span class="rating-score">{{ product.average_rating }}</span>
-                        <span class="rating-count">({{ product.review_count }} đánh giá)</span>
+                        {% if product.review_count > 0 %}
+                            <span class="stars-gold">&#9733;&#9733;&#9733;&#9733;&#9733;</span>
+                            <span class="rating-score">{{ product.average_rating }}</span>
+                            <span class="rating-count">({{ product.review_count }} đánh giá)</span>
+                        {% else %}
+                            <span class="rating-count">Chưa có đánh giá</span>
+                        {% endif %}
                     </div>
 
                     <h3 class="product-title">
@@ -324,6 +330,17 @@
             <h3>Hiện chưa có sản phẩm nào trong danh mục này</h3>
             <p>Vui lòng quay lại sau hoặc truy cập trang quản trị để thêm sản phẩm.</p>
         </div>
+        {% endif %}
+        {% if page_obj.has_other_pages %}
+        <nav class="pagination-bar" aria-label="Phân trang sản phẩm">
+            {% if page_obj.has_previous %}
+                <a href="?page={{ page_obj.previous_page_number }}{% if search_query %}&q={{ search_query|urlencode }}{% endif %}{% if price_range != 'all' %}&price_range={{ price_range }}{% endif %}{% if sort_by != 'newest' %}&sort={{ sort_by }}{% endif %}" class="page-link">&larr; Trước</a>
+            {% endif %}
+            <span class="page-link active">Trang {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+            {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}{% if search_query %}&q={{ search_query|urlencode }}{% endif %}{% if price_range != 'all' %}&price_range={{ price_range }}{% endif %}{% if sort_by != 'newest' %}&sort={{ sort_by }}{% endif %}" class="page-link">Sau &rarr;</a>
+            {% endif %}
+        </nav>
         {% endif %}
     </section>
 </div>

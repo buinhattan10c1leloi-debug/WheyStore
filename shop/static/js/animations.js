@@ -41,7 +41,24 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     /**
-     * Bind Fly-to-Cart animation to any Add-to-Cart form (static or dynamically rendered)
+     * Show non-blocking toast notification for AJAX cart & UI feedback
+     */
+    function showWheyToast(message, isError = false) {
+        const existing = document.querySelector(".whey-toast");
+        if (existing) existing.remove();
+        const toast = document.createElement("div");
+        toast.className = "whey-toast" + (isError ? " error" : "");
+        toast.textContent = message;
+        document.body.appendChild(toast);
+        setTimeout(() => {
+            toast.style.opacity = "0";
+            toast.style.transition = "opacity 0.25s ease";
+            setTimeout(() => toast.remove(), 260);
+        }, 2800);
+    }
+
+    /**
+     * Bind Fly-to-Cart animation + AJAX fetch to any Add-to-Cart form
      */
     function bindAddToCartForm(form) {
         if (!form || form.dataset.gsapBound === "true") return;
@@ -51,11 +68,41 @@ document.addEventListener("DOMContentLoaded", () => {
             if (form.dataset.gsapSubmitting === "true") return;
             e.preventDefault();
             form.dataset.gsapSubmitting = "true";
-            sessionStorage.setItem("wheystore_cart_just_added", "1");
 
             const submitBtn = form.querySelector("button[type='submit']");
+            const formData = new FormData(form);
+
+            const sendAjax = () => {
+                fetch(form.action, {
+                    method: "POST",
+                    body: formData,
+                    headers: { "X-Requested-With": "XMLHttpRequest" }
+                })
+                    .then((res) => res.json().then((data) => ({ ok: res.ok, data })))
+                    .then(({ ok, data }) => {
+                        form.dataset.gsapSubmitting = "false";
+                        if (ok && data.ok) {
+                            if (cartBadge && typeof data.cart_total_items !== "undefined") {
+                                cartBadge.textContent = String(data.cart_total_items);
+                            }
+                            const headerTotal = document.querySelector(".cart-header-total");
+                            if (headerTotal && typeof data.cart_total_price !== "undefined") {
+                                headerTotal.textContent = `${Number(data.cart_total_price).toLocaleString("vi-VN")}đ`;
+                            }
+                            bounceCartBadge();
+                            showWheyToast(data.message || "Đã thêm vào giỏ hàng!");
+                        } else {
+                            showWheyToast(data.error || "Không thể thêm sản phẩm vào giỏ.", true);
+                        }
+                    })
+                    .catch(() => {
+                        form.dataset.gsapSubmitting = "false";
+                        form.submit();
+                    });
+            };
+
             if (!submitBtn || !cartBtn) {
-                form.submit();
+                sendAjax();
                 return;
             }
 
@@ -76,7 +123,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const flyTl = gsap.timeline({
                 onComplete: () => {
                     orb.remove();
-                    form.submit();
+                    sendAjax();
                 }
             });
 
@@ -107,14 +154,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     scale: 0.2,
                     autoAlpha: 0,
                     duration: 0.12
-                })
-                .add(() => {
-                    if (cartBadge) {
-                        const current = parseInt(cartBadge.textContent || "0", 10);
-                        cartBadge.textContent = String(current + 1);
-                    }
-                    bounceCartBadge();
-                }, "-=0.12");
+                });
         });
     }
 
@@ -615,6 +655,83 @@ document.addEventListener("DOMContentLoaded", () => {
                 searchInput?.addEventListener("input", applyLiveFilterAndSort);
                 priceFilter?.addEventListener("change", applyLiveFilterAndSort);
                 sortSelect?.addEventListener("change", applyLiveFilterAndSort);
+            }
+
+            // ------------------------------------------------------------
+            // 10. MOBILE NAVIGATION DRAWER, SEARCH SUGGEST & STAR PICKER
+            // ------------------------------------------------------------
+            const mobileToggle = document.getElementById("mobile-menu-toggle");
+            const mainNavLinks = document.getElementById("main-nav-links");
+            if (mobileToggle && mainNavLinks) {
+                mobileToggle.addEventListener("click", () => {
+                    const isOpen = mainNavLinks.classList.toggle("open");
+                    mobileToggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
+                });
+            }
+
+            const suggestBox = document.getElementById("search-suggest-box");
+            if (searchInput && suggestBox) {
+                let suggestTimer = null;
+                searchInput.addEventListener("input", () => {
+                    clearTimeout(suggestTimer);
+                    const q = searchInput.value.trim();
+                    if (q.length < 2) {
+                        suggestBox.classList.remove("active");
+                        suggestBox.innerHTML = "";
+                        return;
+                    }
+                    suggestTimer = setTimeout(() => {
+                        fetch(`/api/search-suggest/?q=${encodeURIComponent(q)}`)
+                            .then((r) => r.json())
+                            .then((data) => {
+                                const results = data.results || [];
+                                if (results.length === 0) {
+                                    suggestBox.classList.remove("active");
+                                    suggestBox.innerHTML = "";
+                                    return;
+                                }
+                                suggestBox.innerHTML = results
+                                    .map(
+                                        (item) =>
+                                            `<a href="${item.url}" class="search-suggest-item">
+                                                <span>${item.name}${item.brand ? ` (${item.brand})` : ""}</span>
+                                                <span class="suggest-price">${Number(item.price).toLocaleString("vi-VN")}đ</span>
+                                            </a>`
+                                    )
+                                    .join("");
+                                suggestBox.classList.add("active");
+                            })
+                            .catch(() => {});
+                    }, 220);
+                });
+                document.addEventListener("click", (evt) => {
+                    if (!suggestBox.contains(evt.target) && evt.target !== searchInput) {
+                        suggestBox.classList.remove("active");
+                    }
+                });
+            }
+
+            const starPicker = document.querySelector(".star-picker");
+            if (starPicker) {
+                const targetId = starPicker.dataset.targetSelect;
+                const ratingSelect = targetId ? document.getElementById(targetId) : null;
+                const starBtns = starPicker.querySelectorAll(".star-btn");
+                const updateStars = (val) => {
+                    starBtns.forEach((btn) => {
+                        const v = parseInt(btn.dataset.value || "0", 10);
+                        btn.classList.toggle("active", v <= val);
+                    });
+                };
+                if (ratingSelect) {
+                    updateStars(parseInt(ratingSelect.value || "5", 10));
+                    starBtns.forEach((btn) => {
+                        btn.addEventListener("click", () => {
+                            const val = parseInt(btn.dataset.value || "5", 10);
+                            ratingSelect.value = String(val);
+                            updateStars(val);
+                        });
+                    });
+                }
             }
         }
     );

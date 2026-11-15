@@ -19,9 +19,12 @@
         <a href="/admin/" target="_blank" class="btn-secondary btn-large" style="padding: 10px 18px; font-size: 0.82rem;">
             &#9881; Mở Django Admin Gốc (/admin/)
         </a>
-        <a href="{% url 'dashboard_logout' %}" class="btn-remove-item" style="padding: 10px 16px;">
-            Đăng Xuất
-        </a>
+        <form action="{% url 'dashboard_logout' %}" method="post" style="display: inline;">
+            {% csrf_token %}
+            <button type="submit" class="btn-remove-item" style="padding: 10px 16px; cursor: pointer;">
+                Đăng Xuất
+            </button>
+        </form>
     </div>
 </section>
 

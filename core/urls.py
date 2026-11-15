@@ -22,6 +22,8 @@ urlpatterns = [
         name='django.contrib.sitemaps.views.sitemap'
     ),
     path('dashboard/', shop_views.admin_dashboard, name='dashboard'),
+    path('dashboard/orders/export/', shop_views.dashboard_export_orders_csv, name='dashboard_export_orders_csv'),
+    path('api/search-suggest/', shop_views.search_suggest_api, name='search_suggest_api'),
     path('dashboard/login/', shop_views.dashboard_login, name='dashboard_login'),
     path('dashboard/logout/', shop_views.dashboard_logout, name='dashboard_logout'),
     path(

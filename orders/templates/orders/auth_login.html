@@ -1,0 +1,27 @@
+{% extends "shop/base.html" %}
+{% block title %}Đăng Nhập Tài Khoản | WheyStore{% endblock %}
+{% block content %}
+<div class="dashboard-login-wrapper">
+    <div class="checkout-card dashboard-login-card">
+        <h1 class="checkout-section-title">&#9889; Đăng Nhập Khách Hàng</h1>
+        <form method="post">
+            {% csrf_token %}
+            {% if form.errors %}
+                <div class="flash-alert flash-error" style="margin-bottom: 16px;">Tên đăng nhập hoặc mật khẩu không đúng.</div>
+            {% endif %}
+            <div class="form-group">
+                <label for="id_username">Tên đăng nhập</label>
+                <input type="text" name="username" id="id_username" class="fitness-input" required>
+            </div>
+            <div class="form-group">
+                <label for="id_password">Mật khẩu</label>
+                <input type="password" name="password" id="id_password" class="fitness-input" required>
+            </div>
+            <button type="submit" class="btn-buy btn-large" style="width: 100%; justify-content: center;">Đăng Nhập</button>
+        </form>
+        <p style="margin-top: 16px; text-align: center; color: var(--text-secondary); font-size: 0.9rem;">
+            Chưa có tài khoản? <a href="{% url 'orders:customer_register' %}" style="color: var(--accent-red); font-weight: 700;">Đăng ký ngay</a>
+        </p>
+    </div>
+</div>
+{% endblock %}

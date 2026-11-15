@@ -57,14 +57,21 @@ Dự án **WheyStore** là nền tảng thương mại điện tử chuyên nghi
 python -m venv venv
 .\venv\Scripts\activate
 
-# 2. Cài đặt thư viện
+# 2. Cài đặt thư viện (đã ghim phiên bản UTF-8)
 pip install -r requirements.txt
 
-# 3. Chạy Migration & Nạp 10 sản phẩm thực tế + ảnh Studio 800x800px
-python manage.py migrate
-python seed_real_products.py
+# 3. Cấu hình biến môi trường (.env)
+copy .env.example .env
 
-# 4. Khởi động Server tại cổng 8000
+# 4. Chạy Migration & Nạp dữ liệu mẫu an toàn (không ghi đè dữ liệu thật)
+python manage.py migrate
+python manage.py seed_demo
+
+# 5. Chạy kiểm thử tự động & kiểm tra bảo mật triển khai
+python manage.py test -v 2
+python manage.py check --deploy
+
+# 6. Khởi động Server tại cổng 8000
 python manage.py runserver 8000
 ```
 

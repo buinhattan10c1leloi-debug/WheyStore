@@ -1,0 +1,10 @@
+{% extends "shop/base.html" %}
+{% block title %}Lỗi Hệ Thống (500) | WheyStore{% endblock %}
+{% block content %}
+<div class="empty-box" style="max-width: 620px; margin: 48px auto; padding: 48px 28px;">
+    <div class="empty-icon" style="font-size: 4rem;">500</div>
+    <h1 style="font-size: 1.6rem; font-weight: 900; margin-bottom: 10px;">ĐÃ XẢY RA LỖI MÁY CHỦ</h1>
+    <p style="margin-bottom: 24px;">Hệ thống đang gặp sự cố tạm thời. Đội ngũ kỹ thuật WheyStore đã ghi nhận và đang xử lý.</p>
+    <a href="{% url 'shop:product_list' %}" class="btn-buy btn-large">Quay Lại Trang Chủ WheyStore</a>
+</div>
+{% endblock %}
