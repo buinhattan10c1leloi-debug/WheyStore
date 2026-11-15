@@ -6,6 +6,8 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse, JsonResponse
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.signals import user_logged_in
+from django.dispatch import receiver
 from django.views.decorators.http import require_POST
 from django.core.paginator import Paginator
 from django.db import transaction
@@ -14,12 +16,27 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.core.cache import cache
-from .models import Category, Product
+from .models import Category, Product, Bundle, WishlistItem
 from .forms import ReviewForm
+from cart.cart import Cart
 from cart.forms import CartAddProductForm
 from orders.models import Order, OrderItem, OrderStatusLog, Coupon
 
 logger = logging.getLogger('shop')
+
+
+@receiver(user_logged_in)
+def sync_session_wishlist_on_login(sender, request, user, **kwargs):
+    """Đồng bộ danh sách yêu thích từ session vào tài khoản khi người dùng đăng nhập."""
+    session_ids = request.session.get('wishlist', [])
+    if not session_ids:
+        return
+    for pid in session_ids:
+        prod = Product.objects.filter(id=pid, available=True).first()
+        if prod:
+            WishlistItem.objects.get_or_create(user=user, product=prod)
+    request.session['wishlist'] = []
+    request.session.modified = True
 
 
 def product_list(request, category_slug=None):
@@ -38,10 +55,14 @@ def product_list(request, category_slug=None):
         category = get_object_or_404(Category, slug=category_slug)
         products = products.filter(category=category)
 
-    # Server-side Search, Price Filter & Sort
+    # Server-side Search, Price Filter, Advanced Filters & Sort
     search_query = request.GET.get('q', '').strip()
     price_range = request.GET.get('price', 'all')
     sort_by = request.GET.get('sort', 'newest')
+    selected_brand = request.GET.get('brand', '').strip()
+    selected_flavor = request.GET.get('flavor', '').strip()
+    selected_goal = request.GET.get('goal', '').strip()
+    in_stock_only = request.GET.get('in_stock', '') == '1'
 
     if search_query:
         products = products.filter(
@@ -51,6 +72,15 @@ def product_list(request, category_slug=None):
             Q(origin__icontains=search_query) |
             Q(description__icontains=search_query)
         )
+
+    if selected_brand:
+        products = products.filter(brand__iexact=selected_brand)
+    if selected_flavor:
+        products = products.filter(flavor__icontains=selected_flavor)
+    if selected_goal:
+        products = products.filter(goal=selected_goal)
+    if in_stock_only:
+        products = products.filter(stock__gt=0)
 
     if price_range == 'under_1m':
         products = products.filter(price__lt=1000000)
@@ -107,6 +137,20 @@ def product_list(request, category_slug=None):
             'review_count': p.review_count,
         })
 
+    bundles = Bundle.objects.filter(active=True).prefetch_related('products')[:4]
+    brands = (
+        Product.objects.filter(available=True)
+        .exclude(brand='')
+        .values_list('brand', flat=True)
+        .distinct()
+        .order_by('brand')
+    )
+    if request.user.is_authenticated:
+        wishlist_ids = set(WishlistItem.objects.filter(user=request.user).values_list('product_id', flat=True))
+    else:
+        wishlist_ids = set(request.session.get('wishlist', []))
+    compare_ids = set(request.session.get('compare', []))
+
     cart_product_form = CartAddProductForm()
     return render(
         request,
@@ -120,6 +164,15 @@ def product_list(request, category_slug=None):
             'search_query': search_query,
             'price_range': price_range,
             'sort_by': sort_by,
+            'selected_brand': selected_brand,
+            'selected_flavor': selected_flavor,
+            'selected_goal': selected_goal,
+            'in_stock_only': in_stock_only,
+            'brands': brands,
+            'goal_choices': Product.GOAL_CHOICES,
+            'bundles': bundles,
+            'wishlist_ids': wishlist_ids,
+            'compare_ids': compare_ids,
             'calc_catalog_json': json.dumps(calc_catalog, ensure_ascii=False),
         }
     )
@@ -140,6 +193,7 @@ def search_suggest_api(request):
             'id': p.id,
             'name': p.name,
             'brand': p.brand,
+            'price': int(p.price),
             'price_formatted': f"{int(p.price):,}".replace(",", ".") + "đ",
             'url': p.get_absolute_url(),
             'image_url': p.image.url if p.image else '',
@@ -186,6 +240,30 @@ def product_detail(request, id, slug):
     else:
         review_form = ReviewForm()
 
+    # Đã xem gần đây (session) & Sản phẩm liên quan
+    recent_ids = request.session.get('recently_viewed', [])
+    recent_ids = [pid for pid in recent_ids if pid != product.id][:5]
+    recently_viewed_products = list(
+        Product.objects.filter(id__in=recent_ids, available=True)
+        .annotate(annotated_avg_rating=Avg('reviews__rating'), annotated_review_count=Count('reviews'))
+    )
+    recently_viewed_products.sort(key=lambda p: recent_ids.index(p.id) if p.id in recent_ids else 999)
+    request.session['recently_viewed'] = [product.id] + recent_ids
+    request.session.modified = True
+
+    related_products = (
+        Product.objects.filter(available=True)
+        .filter(Q(category=product.category) | Q(brand=product.brand))
+        .exclude(id=product.id)
+        .annotate(annotated_avg_rating=Avg('reviews__rating'), annotated_review_count=Count('reviews'))[:4]
+    )
+
+    if request.user.is_authenticated:
+        in_wishlist = WishlistItem.objects.filter(user=request.user, product=product).exists()
+    else:
+        in_wishlist = product.id in request.session.get('wishlist', [])
+    in_compare = product.id in request.session.get('compare', [])
+
     cart_product_form = CartAddProductForm()
     return render(
         request,
@@ -195,8 +273,107 @@ def product_detail(request, id, slug):
             'cart_product_form': cart_product_form,
             'reviews': reviews,
             'review_form': review_form,
+            'recently_viewed_products': recently_viewed_products[:4],
+            'related_products': related_products,
+            'in_wishlist': in_wishlist,
+            'in_compare': in_compare,
         }
     )
+
+
+@require_POST
+def bundle_add_to_cart(request, bundle_id):
+    bundle = get_object_or_404(Bundle.objects.prefetch_related('products'), id=bundle_id, active=True)
+    products = list(bundle.products.all())
+    if not products:
+        messages.error(request, "Combo này hiện chưa có sản phẩm.")
+        return redirect('shop:product_list')
+
+    cart = Cart(request)
+    for prod in products:
+        current_qty = cart.cart.get(str(prod.id), {}).get('quantity', 0)
+        if not prod.available or prod.stock < current_qty + 1:
+            messages.error(
+                request,
+                f"Không thể thêm combo '{bundle.name}': sản phẩm '{prod.name}' không đủ tồn kho."
+            )
+            return redirect('shop:product_list')
+
+    for prod in products:
+        cart.add(product=prod, quantity=1, override_quantity=False)
+
+    messages.success(request, f"Đã thêm toàn bộ combo '{bundle.name}' vào giỏ hàng!")
+    return redirect('cart:cart_detail')
+
+
+@require_POST
+def wishlist_toggle(request, product_id):
+    product = get_object_or_404(Product, id=product_id, available=True)
+    added = False
+    if request.user.is_authenticated:
+        obj, created = WishlistItem.objects.get_or_create(user=request.user, product=product)
+        if not created:
+            obj.delete()
+        else:
+            added = True
+    else:
+        wlist = request.session.get('wishlist', [])
+        if product.id in wlist:
+            wlist.remove(product.id)
+        else:
+            wlist.append(product.id)
+            added = True
+        request.session['wishlist'] = wlist
+        request.session.modified = True
+
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        return JsonResponse({'ok': True, 'added': added})
+
+    messages.success(
+        request,
+        f"Đã {'thêm' if added else 'gỡ'} '{product.name}' {'vào' if added else 'khỏi'} danh sách yêu thích."
+    )
+    next_url = request.POST.get('next', '')
+    if next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}, require_https=request.is_secure()):
+        return redirect(next_url)
+    return redirect('shop:wishlist')
+
+
+def wishlist_view(request):
+    if request.user.is_authenticated:
+        products = Product.objects.filter(
+            wishlisted_by__user=request.user, available=True
+        ).annotate(annotated_avg_rating=Avg('reviews__rating'), annotated_review_count=Count('reviews'))
+    else:
+        ids = request.session.get('wishlist', [])
+        products = Product.objects.filter(
+            id__in=ids, available=True
+        ).annotate(annotated_avg_rating=Avg('reviews__rating'), annotated_review_count=Count('reviews'))
+    return render(request, 'shop/wishlist.html', {'products': products})
+
+
+@require_POST
+def compare_toggle(request, product_id):
+    product = get_object_or_404(Product, id=product_id, available=True)
+    clist = request.session.get('compare', [])
+    if product.id in clist:
+        clist.remove(product.id)
+        messages.info(request, f"Đã gỡ '{product.name}' khỏi bảng so sánh.")
+    else:
+        if len(clist) >= 3:
+            messages.warning(request, "Chỉ có thể so sánh tối đa 3 sản phẩm cùng lúc.")
+        else:
+            clist.append(product.id)
+            messages.success(request, f"Đã thêm '{product.name}' vào bảng so sánh ({len(clist)}/3).")
+    request.session['compare'] = clist
+    request.session.modified = True
+    return redirect('shop:compare')
+
+
+def compare_view(request):
+    ids = request.session.get('compare', [])[:3]
+    products = list(Product.objects.filter(id__in=ids, available=True))
+    return render(request, 'shop/compare.html', {'products': products})
 
 
 # ==============================================================================

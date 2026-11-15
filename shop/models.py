@@ -1,4 +1,5 @@
 import re
+from django.conf import settings
 from django.db import models
 from django.db.models import Avg, Count
 from django.urls import reverse
@@ -29,6 +30,12 @@ class Category(models.Model):
 
 
 class Product(models.Model):
+    GOAL_CHOICES = (
+        ('lean_bulk', 'Tăng cơ nạc'),
+        ('cutting', 'Giảm mỡ / Siết cơ'),
+        ('mass_gain', 'Tăng cân / Tăng cơ'),
+        ('strength', 'Sức mạnh & Phục hồi'),
+    )
     category = models.ForeignKey(
         Category,
         related_name='products',
@@ -38,6 +45,7 @@ class Product(models.Model):
     name = models.CharField(max_length=255, verbose_name="Tên sản phẩm")
     slug = models.SlugField(max_length=255)
     brand = models.CharField(max_length=100, blank=True, default='', verbose_name="Thương hiệu")
+    goal = models.CharField(max_length=20, choices=GOAL_CHOICES, default='lean_bulk', verbose_name="Mục tiêu tập luyện")
     image = models.ImageField(upload_to='products/%Y/%m/%d', blank=True, null=True, verbose_name="Ảnh sản phẩm")
     description = models.TextField(blank=True, verbose_name="Mô tả")
     price = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Giá bán (VNĐ)")
@@ -172,6 +180,63 @@ class Product(models.Model):
         if annotated is not None:
             return int(annotated)
         return self.reviews.count()
+
+    @property
+    def price_per_serving(self):
+        servs = _extract_number(self.servings, 0)
+        if servs <= 0:
+            return None
+        return round(float(self.price) / servs)
+
+
+class Bundle(models.Model):
+    name = models.CharField(max_length=200, verbose_name="Tên Combo")
+    slug = models.SlugField(max_length=200, unique=True)
+    description = models.TextField(blank=True, verbose_name="Mô tả combo")
+    products = models.ManyToManyField(Product, related_name='bundles', verbose_name="Sản phẩm trong combo")
+    bundle_price = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Giá Combo (VNĐ)")
+    active = models.BooleanField(default=True, verbose_name="Đang bán")
+    created = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created']
+        verbose_name = 'Combo sản phẩm'
+        verbose_name_plural = 'Combo sản phẩm'
+
+    def __str__(self):
+        return self.name
+
+    @property
+    def original_total_price(self):
+        return sum(p.price for p in self.products.all())
+
+    @property
+    def savings_amount(self):
+        diff = self.original_total_price - self.bundle_price
+        return diff if diff > 0 else 0
+
+
+class WishlistItem(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name='wishlist_items',
+        on_delete=models.CASCADE,
+    )
+    product = models.ForeignKey(
+        Product,
+        related_name='wishlisted_by',
+        on_delete=models.CASCADE,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'product')
+        ordering = ['-created_at']
+        verbose_name = 'Sản phẩm yêu thích'
+        verbose_name_plural = 'Sản phẩm yêu thích'
+
+    def __str__(self):
+        return f"{self.user} - {self.product.name}"
 
 
 class Review(models.Model):

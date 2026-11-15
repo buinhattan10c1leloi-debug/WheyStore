@@ -333,6 +333,21 @@
                     Quay Lại
                 </a>
             {% endif %}
+            <div style="display: flex; gap: 10px; margin-top: 12px;">
+                <form action="{% url 'shop:wishlist_toggle' product.id %}" method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ product.get_absolute_url }}">
+                    <button type="submit" class="btn-secondary" style="padding: 8px 14px; font-size: 0.85rem;">
+                        {% if in_wishlist %}&#10084; Đã thích{% else %}&#9825; Yêu thích{% endif %}
+                    </button>
+                </form>
+                <form action="{% url 'shop:compare_toggle' product.id %}" method="post">
+                    {% csrf_token %}
+                    <button type="submit" class="btn-secondary" style="padding: 8px 14px; font-size: 0.85rem;">
+                        {% if in_compare %}&#9878; Đã thêm so sánh{% else %}&#9878; So sánh{% endif %}
+                    </button>
+                </form>
+            </div>
         </div>
     </div>
 </div>
@@ -418,4 +433,32 @@
         </div>
     </div>
 </section>
+
+{% if related_products %}
+<section style="margin-top: 32px;">
+    <h2 class="section-title" style="margin-bottom: 16px;">&#128293; Sản Phẩm Liên Quan</h2>
+    <div class="product-grid">
+        {% for rp in related_products %}
+        <article class="product-card" style="padding: 16px;">
+            <a href="{{ rp.get_absolute_url }}" style="font-weight: 800; display: block; margin-bottom: 6px;">{{ rp.name }}</a>
+            <span style="color: var(--accent-red); font-weight: 900;">{{ rp.price|floatformat:0 }}đ</span>
+        </article>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+
+{% if recently_viewed_products %}
+<section style="margin-top: 28px;">
+    <h2 class="section-title" style="margin-bottom: 16px;">&#128337; Đã Xem Gần Đây</h2>
+    <div class="product-grid">
+        {% for rv in recently_viewed_products %}
+        <article class="product-card" style="padding: 16px;">
+            <a href="{{ rv.get_absolute_url }}" style="font-weight: 800; display: block; margin-bottom: 6px;">{{ rv.name }}</a>
+            <span style="color: var(--accent-red); font-weight: 900;">{{ rv.price|floatformat:0 }}đ</span>
+        </article>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
 {% endblock %}

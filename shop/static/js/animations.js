@@ -502,7 +502,34 @@ document.addEventListener("DOMContentLoaded", () => {
                             </div>
                         `
                             )
-                            .join("");
+                            .join("") +
+                            (recommended.length > 1
+                                ? `<div style="margin-top: 10px; text-align: right;">
+                                    <button type="button" id="macro-add-all-combo-btn" class="btn-buy">
+                                        &#9889; Thêm combo được gợi ý (${recommended.length} món) vào giỏ
+                                    </button>
+                                   </div>`
+                                : "");
+
+                        const addAllBtn = document.getElementById("macro-add-all-combo-btn");
+                        if (addAllBtn) {
+                            addAllBtn.addEventListener("click", async () => {
+                                addAllBtn.disabled = true;
+                                for (const prod of recommended) {
+                                    const fd = new FormData();
+                                    fd.append("csrfmiddlewaretoken", csrfToken);
+                                    fd.append("quantity", "1");
+                                    fd.append("override", "False");
+                                    await fetch(prod.add_cart_url, {
+                                        method: "POST",
+                                        body: fd,
+                                        headers: { "X-Requested-With": "XMLHttpRequest" }
+                                    });
+                                }
+                                showWheyToast(`Đã thêm ${recommended.length} sản phẩm gợi ý vào giỏ!`);
+                                window.location.href = "/cart/";
+                            });
+                        }
 
                         gsap.utils
                             .toArray(".card-cart-form", recoContainer)

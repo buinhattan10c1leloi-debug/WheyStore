@@ -1,0 +1,49 @@
+{% extends "shop/base.html" %}
+
+{% block title %}Sản Phẩm Yêu Thích | WheyStore{% endblock %}
+
+{% block content %}
+<div class="cart-page-header">
+    <h1 class="cart-page-title">
+        <span>&#10084; Danh Sách</span>
+        <span class="accent">Yêu Thích</span>
+    </h1>
+    <a href="{% url 'shop:product_list' %}" class="btn-secondary" style="padding: 8px 16px; border-radius: 6px; font-size: 0.85rem; font-weight: 700;">
+        &larr; Tiếp tục mua sắm
+    </a>
+</div>
+
+{% if products %}
+<div class="product-grid">
+    {% for product in products %}
+    <article class="product-card" style="padding: 18px;">
+        <a href="{{ product.get_absolute_url }}" style="font-weight: 800; font-size: 1.05rem; margin-bottom: 6px; display: block;">
+            {{ product.name }}
+        </a>
+        <div style="color: var(--accent-red); font-weight: 900; font-size: 1.15rem; margin-bottom: 12px;">
+            {{ product.price|floatformat:0 }}đ
+        </div>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <form action="{% url 'cart:cart_add' product.id %}" method="post" style="flex: 1;">
+                {% csrf_token %}
+                <input type="hidden" name="quantity" value="1">
+                <input type="hidden" name="override" value="False">
+                <button type="submit" class="btn-buy" style="width: 100%; justify-content: center;">Thêm vào giỏ</button>
+            </form>
+            <form action="{% url 'shop:wishlist_toggle' product.id %}" method="post">
+                {% csrf_token %}
+                <button type="submit" class="btn-secondary" style="padding: 8px 12px;">Bỏ thích</button>
+            </form>
+        </div>
+    </article>
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty-box">
+    <div class="empty-icon">&#10084;</div>
+    <h3>Danh sách yêu thích đang trống</h3>
+    <p>Hãy bấm nút Yêu thích ở trang sản phẩm để lưu lại các dòng Whey bạn quan tâm.</p>
+    <a href="{% url 'shop:product_list' %}" class="btn-buy" style="margin-top: 12px;">Khám phá ngay</a>
+</div>
+{% endif %}
+{% endblock %}

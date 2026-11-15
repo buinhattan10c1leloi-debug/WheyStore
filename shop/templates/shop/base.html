@@ -124,6 +124,12 @@
                     {% endwith %}
                 </li>
                 <li class="nav-item">
+                    <a href="{% url 'shop:wishlist' %}" class="nav-link">&#10084; Yêu thích</a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'shop:compare' %}" class="nav-link">&#9878; So sánh</a>
+                </li>
+                <li class="nav-item">
                     <a href="{% url 'dashboard' %}" class="admin-btn">&#9889; Admin</a>
                 </li>
             </ul>

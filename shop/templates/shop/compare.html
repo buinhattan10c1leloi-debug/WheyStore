@@ -1,0 +1,75 @@
+{% extends "shop/base.html" %}
+
+{% block title %}So Sánh Sản Phẩm | WheyStore{% endblock %}
+
+{% block content %}
+<div class="cart-page-header">
+    <h1 class="cart-page-title">
+        <span>&#9878; So Sánh</span>
+        <span class="accent">Sản Phẩm</span>
+    </h1>
+    <a href="{% url 'shop:product_list' %}" class="btn-secondary" style="padding: 8px 16px; border-radius: 6px; font-size: 0.85rem; font-weight: 700;">
+        &larr; Chọn thêm sản phẩm
+    </a>
+</div>
+
+{% if products %}
+<div class="cart-table-container">
+    <table class="cart-table">
+        <thead>
+            <tr>
+                <th>Tiêu Chí</th>
+                {% for p in products %}
+                <th>
+                    <a href="{{ p.get_absolute_url }}">{{ p.name }}</a>
+                    <form action="{% url 'shop:compare_toggle' p.id %}" method="post" style="margin-top: 6px;">
+                        {% csrf_token %}
+                        <button type="submit" class="btn-remove-coupon">[Gỡ]</button>
+                    </form>
+                </th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Giá bán</strong></td>
+                {% for p in products %}<td style="color: var(--accent-red); font-weight: 800;">{{ p.price|floatformat:0 }}đ</td>{% endfor %}
+            </tr>
+            <tr>
+                <td><strong>Giá / Serving</strong></td>
+                {% for p in products %}
+                <td>{% if p.price_per_serving %}{{ p.price_per_serving|floatformat:0 }}đ / lần{% else %}-{% endif %}</td>
+                {% endfor %}
+            </tr>
+            <tr>
+                <td><strong>Protein / Serving</strong></td>
+                {% for p in products %}<td>{{ p.protein_per_serving }}</td>{% endfor %}
+            </tr>
+            <tr>
+                <td><strong>BCAA / Hoạt chất</strong></td>
+                {% for p in products %}<td>{{ p.bcaa_per_serving }}</td>{% endfor %}
+            </tr>
+            <tr>
+                <td><strong>Calories</strong></td>
+                {% for p in products %}<td>{{ p.calories }}</td>{% endfor %}
+            </tr>
+            <tr>
+                <td><strong>Xuất xứ</strong></td>
+                {% for p in products %}<td>{{ p.origin }}</td>{% endfor %}
+            </tr>
+            <tr>
+                <td><strong>Tồn kho</strong></td>
+                {% for p in products %}<td>{% if p.stock > 0 %}Còn {{ p.stock }} hộp{% else %}Hết hàng{% endif %}</td>{% endfor %}
+            </tr>
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="empty-box">
+    <div class="empty-icon">&#9878;</div>
+    <h3>Chưa có sản phẩm nào trong bảng so sánh</h3>
+    <p>Chọn tối đa 3 sản phẩm ở trang chi tiết hoặc danh sách để so sánh dinh dưỡng và giá trên mỗi serving.</p>
+    <a href="{% url 'shop:product_list' %}" class="btn-buy" style="margin-top: 12px;">Xem sản phẩm</a>
+</div>
+{% endif %}
+{% endblock %}
