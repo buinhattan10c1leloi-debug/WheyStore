@@ -171,10 +171,14 @@ class Order(models.Model):
 
     @property
     def vietqr_url(self):
+        from urllib.parse import quote
         amount_int = int(self.total_amount)
+        bank_id = getattr(settings, 'VIETQR_BANK_ID', 'MB')
+        account_no = getattr(settings, 'VIETQR_ACCOUNT_NO', '0000000000')
+        account_name = quote(getattr(settings, 'VIETQR_ACCOUNT_NAME', 'WHEYSTORE'))
         return (
-            f"https://img.vietqr.io/image/MB-0123456789-compact2.png"
-            f"?amount={amount_int}&addInfo=WHEYSTORE%20DH{self.id}&accountName=WHEYSTORE"
+            f"https://img.vietqr.io/image/{bank_id}-{account_no}-compact2.png"
+            f"?amount={amount_int}&addInfo=WHEYSTORE%20DH{self.id}&accountName={account_name}"
         )
 
     def can_transition_to(self, new_status: str) -> bool:

@@ -9,6 +9,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.core.cache import cache
 from django.db import transaction
+from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from cart.cart import Cart
 from cart.forms import CouponApplyForm
@@ -107,6 +108,15 @@ def order_create(request):
 
                     cart.clear()
                     logger.info("Order #DH%s created successfully (total=%s)", order.id, order.total_amount)
+                    from .notifications import (
+                        send_order_confirmation_email,
+                        notify_shop_owner_new_order,
+                        notify_shop_owner_low_stock,
+                    )
+                    send_order_confirmation_email(order)
+                    notify_shop_owner_new_order(order)
+                    for item in order.items.select_related('product').all():
+                        notify_shop_owner_low_stock(item.product)
             except ValueError as exc:
                 logger.warning("Order creation rejected: %s", exc)
                 messages.error(request, str(exc))
@@ -247,3 +257,53 @@ def customer_logout(request):
 def my_orders(request):
     orders = Order.objects.filter(user=request.user).prefetch_related('items__product', 'status_logs').order_by('-created')
     return render(request, 'orders/my_orders.html', {'orders': orders})
+
+
+@csrf_exempt
+@require_POST
+def bank_payment_webhook(request):
+    """Webhook sandbox (SePay/Casso) tự động xác nhận thanh toán qua nội dung WHEYSTORE DH<id>."""
+    import json
+    import hmac
+    from django.conf import settings
+    from django.http import JsonResponse
+    from django.db import transaction
+
+    expected_secret = getattr(settings, 'BANK_WEBHOOK_SECRET', '')
+    provided_secret = (
+        request.headers.get('X-Webhook-Secret', '')
+        or request.headers.get('Authorization', '').replace('Bearer ', '').strip()
+    )
+    if not expected_secret or not hmac.compare_digest(provided_secret, expected_secret):
+        return JsonResponse({'ok': False, 'error': 'Unauthorized'}, status=401)
+
+    try:
+        payload = json.loads(request.body.decode('utf-8'))
+    except Exception:
+        return JsonResponse({'ok': False, 'error': 'Invalid JSON'}, status=400)
+
+    content = str(payload.get('content') or payload.get('description') or '')
+    amount = Decimal(str(payload.get('transferAmount') or payload.get('amount') or 0))
+    match = re.search(r'WHEYSTORE\s+DH(\d+)', content, re.IGNORECASE)
+    if not match:
+        return JsonResponse({'ok': False, 'error': 'Order code not found in content'}, status=400)
+
+    order_id = int(match.group(1))
+    with transaction.atomic():
+        order = Order.objects.select_for_update().filter(id=order_id).first()
+        if not order:
+            return JsonResponse({'ok': False, 'error': 'Order not found'}, status=404)
+        if amount < order.total_amount:
+            return JsonResponse({'ok': False, 'error': 'Insufficient amount'}, status=400)
+        if order.status == 'PENDING':
+            order.status = 'PAID'
+            order.save(update_fields=['status', 'updated'])
+            OrderStatusLog.objects.create(
+                order=order,
+                status='PAID',
+                changed_by='Webhook Ngân Hàng',
+                note=f'Nhận chuyển khoản {int(amount):,}đ'
+            )
+            from .notifications import send_order_status_email
+            send_order_status_email(order)
+    return JsonResponse({'ok': True, 'order_id': order_id, 'status': order.status})

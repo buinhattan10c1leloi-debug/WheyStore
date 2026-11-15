@@ -223,8 +223,8 @@
                                 <input type="hidden" name="status" value="PAID">
                                 <button type="submit"
                                         class="btn-quick-status {% if order.status == 'PAID' %}active{% endif %}"
-                                        title="Đặt là Đã thanh toán">
-                                    Đã TT
+                                        title="Đánh dấu đã nhận tiền">
+                                    {% if order.status == 'PENDING' and order.payment_method == 'BANK' %}Đánh dấu đã nhận tiền{% else %}Đã TT{% endif %}
                                 </button>
                             </form>
 

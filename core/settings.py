@@ -171,6 +171,18 @@ CART_SESSION_ID = 'cart'
 FREE_SHIPPING_THRESHOLD = 1000000
 STANDARD_SHIPPING_FEE = 30000
 
+# VietQR & Bank Webhook Configuration
+VIETQR_BANK_ID = os.environ.get('VIETQR_BANK_ID', 'MB')
+VIETQR_ACCOUNT_NO = os.environ.get('VIETQR_ACCOUNT_NO', '0000000000')
+VIETQR_ACCOUNT_NAME = os.environ.get('VIETQR_ACCOUNT_NAME', 'WHEYSTORE')
+BANK_WEBHOOK_SECRET = os.environ.get('BANK_WEBHOOK_SECRET', '')
+
+# Shop Owner Notifications (Email / Telegram)
+NOTIFY_OWNER_ENABLED = os.environ.get('NOTIFY_OWNER_ENABLED', 'True').lower() in ('1', 'true', 'yes')
+OWNER_NOTIFY_EMAIL = os.environ.get('OWNER_NOTIFY_EMAIL', '')
+TELEGRAM_BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN', '')
+TELEGRAM_CHAT_ID = os.environ.get('TELEGRAM_CHAT_ID', '')
+
 # Logging
 LOGGING = {
     'version': 1,

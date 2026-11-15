@@ -239,3 +239,44 @@ class Phase4ConcurrencyAndIntegrityTests(TestCase):
         self.assertEqual(prod.stock, 0)
         self.assertRedirects(r2, reverse('cart:cart_detail'))
         self.assertEqual(Order.objects.count(), 1)
+
+
+class Phase5BPaymentAndNotificationsTests(TestCase):
+    def test_vietqr_reads_from_settings_and_not_hardcoded(self):
+        from django.test import override_settings
+        order = Order.objects.create(
+            full_name='Khach QR', phone='0901234567', address='123 Duong X', city='HCM',
+            payment_method='BANK', total_amount=Decimal('1950000')
+        )
+        with override_settings(VIETQR_BANK_ID='VCB', VIETQR_ACCOUNT_NO='9988776655', VIETQR_ACCOUNT_NAME='TEST SHOP'):
+            url = order.vietqr_url
+            self.assertIn('VCB-9988776655', url)
+            self.assertNotIn('0123456789', url)
+
+    def test_bank_webhook_marks_order_paid_and_sends_email(self):
+        import json
+        from django.core import mail
+        from django.test import override_settings
+        order = Order.objects.create(
+            full_name='Khach Bank', phone='0901234567', email='khach@example.com',
+            address='123 Duong X', city='HCM', payment_method='BANK', total_amount=Decimal('1950000')
+        )
+        with override_settings(BANK_WEBHOOK_SECRET='secret-123'):
+            bad = self.client.post(
+                reverse('orders:bank_webhook'),
+                data=json.dumps({'content': f'WHEYSTORE DH{order.id}', 'transferAmount': 1950000}),
+                content_type='application/json',
+                HTTP_X_WEBHOOK_SECRET='wrong',
+            )
+            self.assertEqual(bad.status_code, 401)
+
+            ok = self.client.post(
+                reverse('orders:bank_webhook'),
+                data=json.dumps({'content': f'WHEYSTORE DH{order.id}', 'transferAmount': 1950000}),
+                content_type='application/json',
+                HTTP_X_WEBHOOK_SECRET='secret-123',
+            )
+            self.assertEqual(ok.status_code, 200)
+            order.refresh_from_db()
+            self.assertEqual(order.status, 'PAID')
+            self.assertTrue(len(mail.outbox) >= 1)

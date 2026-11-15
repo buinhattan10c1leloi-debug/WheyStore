@@ -585,6 +585,8 @@ def dashboard_update_order_status(request, order_id):
                 changed_by=request.user.username,
                 note=f"Đổi trạng thái từ {old_status_display} -> {order.get_status_display()}"
             )
+            from orders.notifications import send_order_status_email
+            send_order_status_email(order)
             messages.success(
                 request,
                 f"Đã cập nhật đơn hàng #DH{order.id} ({order.full_name}) sang trạng thái: {order.get_status_display()}!"

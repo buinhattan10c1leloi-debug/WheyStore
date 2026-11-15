@@ -11,4 +11,5 @@ urlpatterns = [
     path('accounts/register/', views.customer_register, name='customer_register'),
     path('accounts/login/', views.customer_login, name='customer_login'),
     path('accounts/logout/', views.customer_logout, name='customer_logout'),
+    path('webhook/bank/', views.bank_payment_webhook, name='bank_webhook'),
 ]
