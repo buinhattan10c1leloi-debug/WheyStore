@@ -159,3 +159,36 @@ class Phase5CContentAndGrowthTests(TestCase):
         resp = self.client.get(reverse('cart:cart_detail'))
         self.assertContains(resp, 'WELCOME10')
         self.assertContains(resp, 'OstroVit Creatine')
+
+
+class Phase5DAdminManagementTests(TestCase):
+    def setUp(self):
+        from django.contrib.auth.models import Group
+        self.cat = Category.objects.create(name='Whey', slug='whey-5d')
+        self.prod = Product.objects.create(
+            category=self.cat, name='Iso 100', slug='iso-100',
+            price=Decimal('2100000'), stock=5, available=True
+        )
+        self.mgr_group, _ = Group.objects.get_or_create(name='Quản lý')
+        self.wh_group, _ = Group.objects.get_or_create(name='Nhân viên kho')
+        self.manager = User.objects.create_user(username='mgr', password='Password123!', is_staff=True)
+        self.manager.groups.add(self.mgr_group)
+        self.warehouse = User.objects.create_user(username='wh', password='Password123!', is_staff=True)
+        self.warehouse.groups.add(self.wh_group)
+
+    def test_staff_permissions_reports_and_audit_log(self):
+        from shop.models import AuditLog
+        self.client.force_login(self.warehouse)
+        self.assertEqual(self.client.get(reverse('dashboard_reports')).status_code, 403)
+        self.assertEqual(self.client.get(reverse('dashboard_products')).status_code, 403)
+        self.client.post(reverse('dashboard_quick_restock', args=[self.prod.id]), {'add_qty': 10})
+        self.assertTrue(AuditLog.objects.filter(user='wh', action='Nhập kho nhanh').exists())
+
+        self.client.force_login(self.manager)
+        self.assertEqual(self.client.get(reverse('dashboard_reports')).status_code, 200)
+        self.assertEqual(self.client.get(reverse('dashboard_reports_export_csv')).status_code, 200)
+        self.assertEqual(self.client.get(reverse('dashboard_audit_logs')).status_code, 200)
+        resp = self.client.post(reverse('dashboard_product_toggle', args=[self.prod.id]))
+        self.assertRedirects(resp, reverse('dashboard_products'))
+        self.prod.refresh_from_db()
+        self.assertFalse(self.prod.available)

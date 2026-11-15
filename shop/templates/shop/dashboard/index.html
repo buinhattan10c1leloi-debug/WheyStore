@@ -16,8 +16,17 @@
     </div>
 
     <div class="dashboard-top-actions">
+        <a href="{% url 'dashboard_reports' %}" class="btn-secondary btn-large" style="padding: 10px 14px; font-size: 0.82rem;">
+            &#128202; Báo cáo
+        </a>
+        <a href="{% url 'dashboard_products' %}" class="btn-secondary btn-large" style="padding: 10px 14px; font-size: 0.82rem;">
+            &#128230; Sản phẩm
+        </a>
+        <a href="{% url 'dashboard_audit_logs' %}" class="btn-secondary btn-large" style="padding: 10px 14px; font-size: 0.82rem;">
+            &#128221; Nhật ký
+        </a>
         <a href="/admin/" target="_blank" class="btn-secondary btn-large" style="padding: 10px 18px; font-size: 0.82rem;">
-            &#9881; Mở Django Admin Gốc (/admin/)
+            &#9881; Django Admin
         </a>
         <form action="{% url 'dashboard_logout' %}" method="post" style="display: inline;">
             {% csrf_token %}

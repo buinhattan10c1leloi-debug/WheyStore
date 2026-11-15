@@ -16,8 +16,8 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.core.cache import cache
-from .models import Category, Product, Bundle, WishlistItem, Post
-from .forms import ReviewForm
+from .models import Category, Product, Bundle, WishlistItem, Post, ProductImage, AuditLog
+from .forms import ReviewForm, ProductManageForm
 from cart.cart import Cart
 from cart.forms import CartAddProductForm
 from orders.models import Order, OrderItem, OrderStatusLog, Coupon
@@ -655,6 +655,12 @@ def dashboard_update_order_status(request, order_id):
                 changed_by=request.user.username,
                 note=f"Đổi trạng thái từ {old_status_display} -> {order.get_status_display()}"
             )
+            AuditLog.objects.create(
+                user=request.user.username,
+                action="Đổi trạng thái đơn",
+                target=f"#DH{order.id}",
+                detail=f"{old_status_display} -> {order.get_status_display()}"
+            )
             from orders.notifications import send_order_status_email
             send_order_status_email(order)
             messages.success(
@@ -688,11 +694,164 @@ def dashboard_quick_restock(request, product_id):
     if product.stock > 0:
         product.available = True
     product.save()
+    AuditLog.objects.create(
+        user=request.user.username,
+        action="Nhập kho nhanh",
+        target=product.name,
+        detail=f"+{add_qty} hộp (tồn mới: {product.stock})"
+    )
     messages.success(
         request,
         f"Đã nhập thêm +{add_qty} hộp cho '{product.name}'. Tồn kho mới: {product.stock} hộp!"
     )
     return redirect('dashboard')
+
+
+def _is_manager(user):
+    if not (user.is_authenticated and (user.is_staff or user.is_superuser)):
+        return False
+    if user.is_superuser or user.groups.filter(name='Quản lý').exists():
+        return True
+    return not user.groups.filter(name='Nhân viên kho').exists()
+
+
+def dashboard_reports(request):
+    if not (request.user.is_authenticated and (request.user.is_staff or request.user.is_superuser)):
+        return redirect('dashboard_login')
+    if not _is_manager(request.user):
+        return HttpResponse("Bạn thuộc nhóm Nhân viên kho, không có quyền xem báo cáo doanh thu.", status=403)
+
+    from django.db.models.functions import TruncDate, TruncMonth
+    from django.db.models import F, DecimalField, ExpressionWrapper
+
+    valid_orders = Order.objects.exclude(status='CANCELLED')
+    daily_revenue = (
+        valid_orders.annotate(day=TruncDate('created'))
+        .values('day')
+        .annotate(revenue=Sum('total_amount'), orders=Count('id'))
+        .order_by('-day')[:14]
+    )
+    monthly_revenue = (
+        valid_orders.annotate(month=TruncMonth('created'))
+        .values('month')
+        .annotate(revenue=Sum('total_amount'), orders=Count('id'))
+        .order_by('-month')[:12]
+    )
+    line_total = ExpressionWrapper(F('price') * F('quantity'), output_field=DecimalField(max_digits=14, decimal_places=2))
+    by_product = (
+        OrderItem.objects.filter(order__in=valid_orders)
+        .values('product__name')
+        .annotate(revenue=Sum(line_total), qty=Sum('quantity'))
+        .order_by('-revenue')[:10]
+    )
+    by_category = (
+        OrderItem.objects.filter(order__in=valid_orders)
+        .values('product__category__name')
+        .annotate(revenue=Sum(line_total), qty=Sum('quantity'))
+        .order_by('-revenue')
+    )
+    total_orders = valid_orders.count()
+    coupon_orders = valid_orders.filter(coupon__isnull=False).count()
+    coupon_rate = round((coupon_orders / total_orders) * 100, 1) if total_orders else 0.0
+
+    return render(
+        request,
+        'shop/dashboard/reports.html',
+        {
+            'daily_revenue': daily_revenue,
+            'monthly_revenue': monthly_revenue,
+            'by_product': by_product,
+            'by_category': by_category,
+            'total_orders': total_orders,
+            'coupon_orders': coupon_orders,
+            'coupon_rate': coupon_rate,
+        },
+    )
+
+
+def dashboard_reports_export_csv(request):
+    if not (request.user.is_authenticated and (request.user.is_staff or request.user.is_superuser)):
+        return redirect('dashboard_login')
+    if not _is_manager(request.user):
+        return HttpResponse("Không có quyền xuất báo cáo.", status=403)
+
+    from django.db.models import F, DecimalField, ExpressionWrapper
+    valid_orders = Order.objects.exclude(status='CANCELLED')
+    line_total = ExpressionWrapper(F('price') * F('quantity'), output_field=DecimalField(max_digits=14, decimal_places=2))
+    by_product = (
+        OrderItem.objects.filter(order__in=valid_orders)
+        .values('product__name', 'product__category__name')
+        .annotate(revenue=Sum(line_total), qty=Sum('quantity'))
+        .order_by('-revenue')
+    )
+    response = HttpResponse(content_type='text/csv; charset=utf-8-sig')
+    response['Content-Disposition'] = 'attachment; filename="wheystore-revenue-report.csv"'
+    writer = csv.writer(response)
+    writer.writerow(['Sản phẩm', 'Danh mục', 'Số lượng bán', 'Doanh thu (VNĐ)'])
+    for row in by_product:
+        writer.writerow([row['product__name'], row['product__category__name'], row['qty'], int(row['revenue'] or 0)])
+    return response
+
+
+def dashboard_products(request):
+    if not (request.user.is_authenticated and (request.user.is_staff or request.user.is_superuser)):
+        return redirect('dashboard_login')
+    if not _is_manager(request.user):
+        return HttpResponse("Nhân viên kho chỉ thao tác nhập kho và trạng thái giao hàng.", status=403)
+    products = Product.objects.select_related('category').order_by('-created')
+    return render(request, 'shop/dashboard/products.html', {'products': products})
+
+
+def dashboard_product_form(request, product_id=None):
+    if not (request.user.is_authenticated and (request.user.is_staff or request.user.is_superuser)):
+        return redirect('dashboard_login')
+    if not _is_manager(request.user):
+        return HttpResponse("Không có quyền thêm/sửa sản phẩm.", status=403)
+
+    product = get_object_or_404(Product, id=product_id) if product_id else None
+    old_price = product.price if product else None
+    if request.method == 'POST':
+        form = ProductManageForm(request.POST, request.FILES, instance=product)
+        if form.is_valid():
+            saved = form.save()
+            for extra_img in request.FILES.getlist('extra_images'):
+                ProductImage.objects.create(product=saved, image=extra_img)
+            action = "Cập nhật sản phẩm" if product else "Thêm sản phẩm"
+            detail = f"Giá: {int(saved.price):,}đ, Tồn: {saved.stock}"
+            if old_price is not None and old_price != saved.price:
+                detail = f"Đổi giá {int(old_price):,}đ -> {int(saved.price):,}đ"
+            AuditLog.objects.create(user=request.user.username, action=action, target=saved.name, detail=detail)
+            messages.success(request, f"Đã lưu sản phẩm '{saved.name}'!")
+            return redirect('dashboard_products')
+    else:
+        form = ProductManageForm(instance=product)
+    return render(request, 'shop/dashboard/product_form.html', {'form': form, 'product': product})
+
+
+@require_POST
+def dashboard_product_toggle(request, product_id):
+    if not (request.user.is_authenticated and (request.user.is_staff or request.user.is_superuser)):
+        return redirect('dashboard_login')
+    if not _is_manager(request.user):
+        return HttpResponse("Không có quyền ẩn/hiện sản phẩm.", status=403)
+    product = get_object_or_404(Product, id=product_id)
+    product.available = not product.available
+    product.save(update_fields=['available'])
+    AuditLog.objects.create(
+        user=request.user.username,
+        action="Ẩn/Hiện sản phẩm",
+        target=product.name,
+        detail="Đang bán" if product.available else "Đã ẩn"
+    )
+    messages.info(request, f"Sản phẩm '{product.name}' hiện đang {'hiển thị' if product.available else 'ẩn'}.")
+    return redirect('dashboard_products')
+
+
+def dashboard_audit_logs(request):
+    if not (request.user.is_authenticated and (request.user.is_staff or request.user.is_superuser)):
+        return redirect('dashboard_login')
+    logs = AuditLog.objects.all()[:100]
+    return render(request, 'shop/dashboard/audit_logs.html', {'logs': logs})
 
 
 def robots_txt(request):

@@ -1,0 +1,35 @@
+{% extends "shop/base.html" %}
+{% block title %}Quản Lý Sản Phẩm | WheyStore Admin{% endblock %}
+{% block content %}
+<div class="cart-page-header">
+    <h1 class="cart-page-title"><span>&#128230; Quản Lý</span> <span class="accent">Sản Phẩm</span></h1>
+    <div style="display: flex; gap: 10px;">
+        <a href="{% url 'dashboard_product_create' %}" class="btn-buy" style="padding: 8px 14px;">+ Thêm sản phẩm</a>
+        <a href="{% url 'dashboard' %}" class="btn-secondary" style="padding: 8px 14px;">&larr; Dashboard</a>
+    </div>
+</div>
+
+<div class="cart-table-container">
+    <table class="cart-table">
+        <thead><tr><th>Tên sản phẩm</th><th>Danh mục</th><th>Giá bán</th><th>Tồn kho</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
+        <tbody>
+            {% for p in products %}
+            <tr>
+                <td><strong>{{ p.name }}</strong></td>
+                <td>{{ p.category.name }}</td>
+                <td>{{ p.price|floatformat:0 }}đ</td>
+                <td>{{ p.stock }}</td>
+                <td>{% if p.available %}Đang bán{% else %}Đã ẩn{% endif %}</td>
+                <td style="display: flex; gap: 8px;">
+                    <a href="{% url 'dashboard_product_edit' p.id %}" class="btn-secondary" style="padding: 5px 10px; font-size: 0.8rem;">Sửa</a>
+                    <form action="{% url 'dashboard_product_toggle' p.id %}" method="post">
+                        {% csrf_token %}
+                        <button type="submit" class="btn-secondary" style="padding: 5px 10px; font-size: 0.8rem;">{% if p.available %}Ẩn{% else %}Hiện{% endif %}</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

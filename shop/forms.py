@@ -1,5 +1,5 @@
 from django import forms
-from .models import Review
+from .models import Review, Product
 
 
 class ReviewForm(forms.ModelForm):
@@ -20,3 +20,23 @@ class ReviewForm(forms.ModelForm):
                 'placeholder': 'Chia sẻ cảm nhận về độ tan, mùi vị và hiệu quả phục hồi cơ bắp...',
             }),
         }
+
+
+class ProductManageForm(forms.ModelForm):
+    class Meta:
+        model = Product
+        fields = [
+            'category', 'name', 'slug', 'brand', 'goal', 'image',
+            'price', 'old_price', 'weight', 'servings',
+            'protein_per_serving', 'bcaa_per_serving', 'calories', 'sugar',
+            'flavor', 'origin', 'free_gift', 'stock', 'available', 'description'
+        ]
+        widgets = {
+            'description': forms.Textarea(attrs={'rows': 3, 'class': 'fitness-textarea'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for name, field in self.fields.items():
+            if not isinstance(field.widget, (forms.CheckboxInput, forms.FileInput, forms.Textarea)):
+                field.widget.attrs.setdefault('class', 'fitness-input')

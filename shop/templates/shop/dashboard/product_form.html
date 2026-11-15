@@ -1,0 +1,19 @@
+{% extends "shop/base.html" %}
+{% block title %}{% if product %}Sửa{% else %}Thêm{% endif %} Sản Phẩm | WheyStore Admin{% endblock %}
+{% block content %}
+<div class="checkout-card" style="max-width: 780px; margin: 0 auto;">
+    <h1 class="checkout-section-title">{% if product %}Sửa Sản Phẩm: {{ product.name }}{% else %}Thêm Sản Phẩm Mới{% endif %}</h1>
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <div class="form-group">
+            <label>Ảnh phụ (chọn nhiều ảnh)</label>
+            <input type="file" name="extra_images" multiple class="fitness-input">
+        </div>
+        <div style="display: flex; gap: 10px; margin-top: 14px;">
+            <button type="submit" class="btn-buy btn-large">Lưu sản phẩm</button>
+            <a href="{% url 'dashboard_products' %}" class="btn-secondary btn-large">Hủy</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

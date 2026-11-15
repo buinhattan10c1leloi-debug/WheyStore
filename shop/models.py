@@ -264,6 +264,31 @@ class Post(models.Model):
         return reverse('shop:blog_detail', args=[self.slug])
 
 
+class ProductImage(models.Model):
+    product = models.ForeignKey(Product, related_name='gallery_images', on_delete=models.CASCADE)
+    image = models.ImageField(upload_to='products/gallery/%Y/%m/%d')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at']
+
+
+class AuditLog(models.Model):
+    user = models.CharField(max_length=150, verbose_name="Người thực hiện")
+    action = models.CharField(max_length=100, verbose_name="Hành động")
+    target = models.CharField(max_length=255, verbose_name="Đối tượng")
+    detail = models.TextField(blank=True, verbose_name="Chi tiết")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Thời gian")
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Nhật ký thao tác'
+        verbose_name_plural = 'Nhật ký thao tác'
+
+    def __str__(self):
+        return f"[{self.user}] {self.action} - {self.target}"
+
+
 class Review(models.Model):
     RATING_CHOICES = [(i, f'{i} Sao') for i in range(1, 6)]
 
