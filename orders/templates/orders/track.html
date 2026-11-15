@@ -1,0 +1,131 @@
+{% extends "shop/base.html" %}
+
+{% block title %}Tra Cứu Đơn Hàng | WheyStore{% endblock %}
+
+{% block content %}
+<!-- Breadcrumbs -->
+<nav class="breadcrumbs">
+    <a href="{% url 'shop:product_list' %}">Trang Chủ</a>
+    <span class="separator">/</span>
+    <span class="current">Tra Cứu Đơn Hàng</span>
+</nav>
+
+<!-- Search Box -->
+<section class="track-search-box">
+    <h1 class="cart-page-title" style="margin-bottom: 6px;">
+        <span>&#128269; Tra Cứu</span>
+        <span class="accent">Đơn Hàng</span>
+    </h1>
+    <p style="color: var(--text-secondary); font-size: 0.95rem;">
+        Nhập <strong>Số điện thoại</strong> đặt hàng hoặc <strong>Mã đơn hàng</strong> (ví dụ: <code>1</code>, <code>#1</code>, <code>DH1</code>) để kiểm tra tiến độ giao hàng và thanh toán.
+    </p>
+
+    <form action="{% url 'orders:order_track' %}" method="get" class="track-search-form">
+        <input type="text"
+               name="q"
+               value="{{ query }}"
+               class="fitness-input"
+               placeholder="Nhập Số điện thoại (VD: 0987654321) hoặc Mã đơn hàng (VD: #1, DH1)..."
+               required>
+        <button type="submit" class="btn-buy btn-large" style="white-space: nowrap; justify-content: center;">
+            <span>&#128269; Kiểm Tra Ngay</span>
+        </button>
+    </form>
+</section>
+
+<!-- Lookup Results -->
+{% if query %}
+    <div class="product-section-header">
+        <h2 class="section-title">Kết Quả Tra Cứu Cho: "{{ query }}"</h2>
+        <span class="product-count">Tìm thấy {{ orders|length }} đơn hàng</span>
+    </div>
+
+    {% if orders %}
+        {% for order in orders %}
+        <article class="track-order-card">
+            <div class="track-order-header">
+                <div style="display: flex; align-items: center; gap: 14px; flex-wrap: wrap;">
+                    <span class="success-badge-id" style="font-size: 0.95rem; padding: 6px 14px;">
+                        ĐƠN HÀNG #DH{{ order.id }}
+                    </span>
+                    <span class="order-status-pill status-{{ order.status }}">
+                        {{ order.get_status_display }}
+                    </span>
+                    <span style="color: var(--text-muted); font-size: 0.85rem;">
+                        🕒 Đặt lúc: {{ order.created|date:"d/m/Y H:i" }}
+                    </span>
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <span style="font-size: 1.3rem; font-weight: 900; color: var(--accent-red);">
+                        {{ order.total_amount|floatformat:0 }} VNĐ
+                    </span>
+                    <a href="{% url 'orders:order_success' order.id %}" class="btn-buy" style="padding: 7px 14px; font-size: 0.78rem;">
+                        {% if order.payment_method == 'BANK' %}
+                            <span>&#9889; Chi Tiết & Mã VietQR</span>
+                        {% else %}
+                            <span>Chi Tiết Đơn &rarr;</span>
+                        {% endif %}
+                    </a>
+                </div>
+            </div>
+
+            <!-- Customer Summary -->
+            <div class="specs-panel" style="margin-bottom: 18px; padding: 14px 18px;">
+                <div class="spec-item">
+                    <span class="spec-label">Người nhận</span>
+                    <span class="spec-value">{{ order.full_name }} ({{ order.phone }})</span>
+                </div>
+                <div class="spec-item">
+                    <span class="spec-label">Địa chỉ nhận hàng</span>
+                    <span class="spec-value">{{ order.address }}, {{ order.city }}</span>
+                </div>
+                <div class="spec-item">
+                    <span class="spec-label">Thanh toán</span>
+                    <span class="spec-value">{{ order.get_payment_method_display }}</span>
+                </div>
+                <div class="spec-item">
+                    <span class="spec-label">Trạng thái hiện tại</span>
+                    <span class="spec-value" style="color: var(--accent-red);">{{ order.get_status_display }}</span>
+                </div>
+            </div>
+
+            <!-- Items in Order -->
+            <div class="cart-table-container" style="margin-bottom: 0;">
+                <table class="cart-table">
+                    <thead>
+                        <tr>
+                            <th>Sản Phẩm</th>
+                            <th>Số Lượng</th>
+                            <th>Đơn Giá</th>
+                            <th>Thành Tiền</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in order.items.all %}
+                        <tr>
+                            <td>
+                                <strong>{{ item.product.name }}</strong>
+                                <span style="color: var(--text-muted); font-size: 0.82rem; margin-left: 6px;">
+                                    ({{ item.product.weight }} &bull; {{ item.product.flavor }})
+                                </span>
+                            </td>
+                            <td><strong>x{{ item.quantity }}</strong></td>
+                            <td class="cart-price-cell">{{ item.price|floatformat:0 }} đ</td>
+                            <td class="cart-subtotal-cell">{{ item.get_cost|floatformat:0 }} đ</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </article>
+        {% endfor %}
+    {% else %}
+        <div class="empty-box">
+            <div class="empty-icon">&#128270;</div>
+            <h3>Không tìm thấy đơn hàng nào khớp với "{{ query }}"</h3>
+            <p>Vui lòng kiểm tra lại Số điện thoại hoặc Mã đơn hàng của bạn.</p>
+        </div>
+    {% endif %}
+{% endif %}
+{% endblock %}

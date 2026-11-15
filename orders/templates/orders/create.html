@@ -1,0 +1,159 @@
+{% extends "shop/base.html" %}
+
+{% block title %}Thanh Toán Đơn Hàng (Checkout) | WheyStore{% endblock %}
+
+{% block content %}
+<!-- Breadcrumbs -->
+<nav class="breadcrumbs">
+    <a href="{% url 'shop:product_list' %}">Trang Chủ</a>
+    <span class="separator">/</span>
+    <a href="{% url 'cart:cart_detail' %}">Giỏ Hàng</a>
+    <span class="separator">/</span>
+    <span class="current">Thanh Toán</span>
+</nav>
+
+<div class="cart-page-header">
+    <h1 class="cart-page-title">
+        <span>&#9889; Thanh Toán</span>
+        <span class="accent">Đơn Hàng</span>
+    </h1>
+    <a href="{% url 'cart:cart_detail' %}" class="btn-secondary" style="padding: 8px 16px; border-radius: 6px; font-size: 0.85rem; font-weight: 700;">
+        &larr; Quay lại giỏ hàng
+    </a>
+</div>
+
+<div class="checkout-layout">
+    <!-- Left Column: Customer & Shipping Form -->
+    <div class="checkout-card">
+        <h2 class="checkout-section-title">
+            <span>&#128205; Thông Tin Nhận Hàng &amp; Thanh Toán</span>
+        </h2>
+
+        <form action="{% url 'orders:order_create' %}" method="post">
+            {% csrf_token %}
+
+            <div class="form-grid-row">
+                <div class="form-group">
+                    <label for="{{ form.full_name.id_for_label }}">Họ và tên người nhận <span class="req">*</span></label>
+                    {{ form.full_name }}
+                    {{ form.full_name.errors }}
+                </div>
+                <div class="form-group">
+                    <label for="{{ form.phone.id_for_label }}">Số điện thoại <span class="req">*</span></label>
+                    {{ form.phone }}
+                    {{ form.phone.errors }}
+                </div>
+            </div>
+
+            <div class="form-grid-row">
+                <div class="form-group">
+                    <label for="{{ form.email.id_for_label }}">Email (Không bắt buộc)</label>
+                    {{ form.email }}
+                    {{ form.email.errors }}
+                </div>
+                <div class="form-group">
+                    <label for="{{ form.city.id_for_label }}">Tỉnh / Thành phố <span class="req">*</span></label>
+                    {{ form.city }}
+                    {{ form.city.errors }}
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="{{ form.address.id_for_label }}">Địa chỉ nhận hàng chi tiết <span class="req">*</span></label>
+                {{ form.address }}
+                {{ form.address.errors }}
+            </div>
+
+            <div class="form-group">
+                <label for="{{ form.payment_method.id_for_label }}">Phương thức thanh toán <span class="req">*</span></label>
+                {{ form.payment_method }}
+                {{ form.payment_method.errors }}
+                <small style="color: var(--text-muted); font-size: 0.8rem;">
+                    💡 Chọn <strong>Chuyển khoản VietQR</strong> để hệ thống tự động tạo mã QR ngân hàng kèm số tiền (đã trừ khuyến mãi) và nội dung đơn hàng.
+                </small>
+            </div>
+
+            <div class="form-group">
+                <label for="{{ form.note.id_for_label }}">Ghi chú giao hàng</label>
+                {{ form.note }}
+                {{ form.note.errors }}
+            </div>
+
+            <button type="submit" class="btn-buy btn-large" style="width: 100%; justify-content: center; margin-top: 8px;">
+                <span>&#10004; Xác Nhận Đặt Hàng ({{ cart.get_total_price_after_discount|floatformat:0 }} VNĐ)</span>
+            </button>
+        </form>
+    </div>
+
+    <!-- Right Column: Order Summary & Coupon Input -->
+    <aside class="checkout-card">
+        <h2 class="checkout-section-title">
+            <span>&#128722; Tóm Tắt Đơn Hàng ({{ cart|length }} món)</span>
+        </h2>
+
+        <ul class="checkout-items-list">
+            {% for item in cart %}
+            <li class="checkout-item-row">
+                <div class="checkout-item-left">
+                    <span class="checkout-item-title">{{ item.product.name }}</span>
+                    <span class="checkout-item-sub">
+                        Số lượng: <strong>x{{ item.quantity }}</strong>
+                        {% if item.product.flavor %} &bull; Vị: {{ item.product.flavor }}{% endif %}
+                        {% if item.product.weight %} ({{ item.product.weight }}){% endif %}
+                    </span>
+                </div>
+                <div class="checkout-item-price">
+                    {{ item.total_price|floatformat:0 }} đ
+                </div>
+            </li>
+            {% endfor %}
+        </ul>
+
+        <!-- Coupon Form in Checkout -->
+        <div style="margin-bottom: 18px; padding-bottom: 18px; border-bottom: 1px solid var(--border-color);">
+            <form action="{% url 'cart:coupon_apply' %}" method="post" class="coupon-form-row">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{% url 'orders:order_create' %}">
+                {{ coupon_apply_form.code }}
+                <button type="submit" class="btn-buy" style="white-space: nowrap; padding: 10px 16px;">
+                    Áp Dụng
+                </button>
+            </form>
+            <div class="coupon-hints">
+                <span>Mã khả dụng:</span>
+                <span class="coupon-pill" onclick="document.querySelector('.coupon-input').value='GYMBRO10'">GYMBRO10 (-10%)</span>
+                <span class="coupon-pill" onclick="document.querySelector('.coupon-input').value='WHEYVIP20'">WHEYVIP20 (-20%)</span>
+            </div>
+        </div>
+
+        <div class="coupon-breakdown">
+            <div class="breakdown-row">
+                <span>Tạm tính:</span>
+                <strong>{{ cart.get_total_price|floatformat:0 }} VNĐ</strong>
+            </div>
+            {% if cart.coupon %}
+            <div class="breakdown-row discount-active">
+                <span>
+                    Mã <strong>{{ cart.coupon.code }}</strong> (-{{ cart.coupon.discount_percent }}%):
+                    <form action="{% url 'cart:coupon_remove' %}" method="post" style="display: inline;">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{% url 'orders:order_create' %}">
+                        <button type="submit" class="btn-remove-coupon">[Gỡ]</button>
+                    </form>
+                </span>
+                <strong>-{{ cart.get_discount|floatformat:0 }} VNĐ</strong>
+            </div>
+            {% endif %}
+            <div class="breakdown-row">
+                <span>Phí vận chuyển:</span>
+                <strong style="color: #4ade80;">MIỄN PHÍ TOÀN QUỐC</strong>
+            </div>
+        </div>
+
+        <div class="checkout-total-row">
+            <span class="checkout-total-label">Tổng thanh toán:</span>
+            <span class="checkout-total-price">{{ cart.get_total_price_after_discount|floatformat:0 }} VNĐ</span>
+        </div>
+    </aside>
+</div>
+{% endblock %}

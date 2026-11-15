@@ -1,0 +1,465 @@
+{% extends "shop/base.html" %}
+
+{% block title %}Admin Command Center (Dashboard) | WheyStore{% endblock %}
+
+{% block content %}
+<!-- Top Header Bar of Custom Dashboard -->
+<section class="dashboard-topbar">
+    <div>
+        <span class="macro-badge">&#9889; TRUNG TÂM ĐIỀU HÀNH NỘI BỘ</span>
+        <h1 class="dashboard-main-title">
+            Whey<span>Store</span> Admin Dashboard
+        </h1>
+        <p style="color: var(--text-secondary); font-size: 0.9rem;">
+            Xin chào Quản trị viên <strong style="color: var(--text-primary);">{{ request.user.username }}</strong> &bull; Quản lý doanh thu, kho hàng và xử lý đơn hàng thời gian thực.
+        </p>
+    </div>
+
+    <div class="dashboard-top-actions">
+        <a href="/admin/" target="_blank" class="btn-secondary btn-large" style="padding: 10px 18px; font-size: 0.82rem;">
+            &#9881; Mở Django Admin Gốc (/admin/)
+        </a>
+        <a href="{% url 'dashboard_logout' %}" class="btn-remove-item" style="padding: 10px 16px;">
+            Đăng Xuất
+        </a>
+    </div>
+</section>
+
+<!-- 1. Overview KPI Cards with GSAP Counter Animation -->
+<section class="dashboard-kpi-grid">
+    <!-- KPI 1: Total Revenue -->
+    <div class="dashboard-kpi-card kpi-highlight-red">
+        <div class="kpi-card-top">
+            <span class="kpi-label">Tổng Doanh Thu Hợp Lệ</span>
+            <span class="kpi-icon">&#128176;</span>
+        </div>
+        <div class="kpi-value-row">
+            <span class="dashboard-kpi-counter" data-target="{{ total_revenue }}">0</span>
+            <span class="kpi-unit">VNĐ</span>
+        </div>
+        <span class="kpi-sub">Tính từ các đơn hàng không bị hủy</span>
+    </div>
+
+    <!-- KPI 2: Pending Orders -->
+    <div class="dashboard-kpi-card">
+        <div class="kpi-card-top">
+            <span class="kpi-label">Đơn Hàng Mới (PENDING)</span>
+            <span class="kpi-icon">&#128230;</span>
+        </div>
+        <div class="kpi-value-row">
+            <span class="dashboard-kpi-counter" data-target="{{ pending_orders_count }}">0</span>
+            <span class="kpi-unit">đơn chờ xử lý</span>
+        </div>
+        <span class="kpi-sub">Trên tổng số <strong>{{ total_orders_count }}</strong> đơn toàn hệ thống</span>
+    </div>
+
+    <!-- KPI 3: Active Products -->
+    <div class="dashboard-kpi-card">
+        <div class="kpi-card-top">
+            <span class="kpi-label">Sản Phẩm Đang Bán</span>
+            <span class="kpi-icon">&#9889;</span>
+        </div>
+        <div class="kpi-value-row">
+            <span class="dashboard-kpi-counter" data-target="{{ active_products_count }}">0</span>
+            <span class="kpi-unit">mặt hàng</span>
+        </div>
+        <span class="kpi-sub">Trạng thái <code>available=True</code> trên kệ</span>
+    </div>
+
+    <!-- KPI 4: Low Stock Alert (stock <= 5) -->
+    <div class="dashboard-kpi-card {% if low_stock_count > 0 %}kpi-alert-warning{% endif %}">
+        <div class="kpi-card-top">
+            <span class="kpi-label">Cảnh Báo Sắp Hết Hàng</span>
+            <span class="kpi-icon">&#9888;</span>
+        </div>
+        <div class="kpi-value-row">
+            <span class="dashboard-kpi-counter" data-target="{{ low_stock_count }}">0</span>
+            <span class="kpi-unit">hũ (stock &le; 5)</span>
+        </div>
+        <span class="kpi-sub">
+            {% if low_stock_count > 0 %}
+                <strong style="color: #fbbf24;">Cần nhập thêm hàng ngay bên dưới!</strong>
+            {% else %}
+                Tất cả sản phẩm đều dồi dào tồn kho
+            {% endif %}
+        </span>
+    </div>
+</section>
+
+<!-- Low-Stock Alert Banner (if any product has stock <= 5) -->
+{% if low_stock_products %}
+<section class="low-stock-alert-box">
+    <div class="low-stock-header">
+        <h3>&#9888; CẢNH BÁO TỒN KHO THẤP (STOCK &le; 5) — CẦN NHẬP HÀNG GẤP:</h3>
+    </div>
+    <div class="low-stock-list">
+        {% for prod in low_stock_products %}
+        <div class="low-stock-item">
+            <div>
+                <strong>{{ prod.name }}</strong>
+                <span style="color: var(--text-muted); font-size: 0.82rem; margin-left: 8px;">
+                    ({{ prod.weight }} &bull; Vị: {{ prod.flavor }})
+                </span>
+                <span class="stock-pill-danger">Còn {{ prod.stock }} hộp</span>
+            </div>
+            <form action="{% url 'dashboard_quick_restock' prod.id %}" method="post" style="display: inline-flex; gap: 8px;">
+                {% csrf_token %}
+                <input type="hidden" name="add_qty" value="20">
+                <button type="submit" class="btn-buy" style="padding: 6px 14px; font-size: 0.78rem;">
+                    + Nhập nhanh 20 hộp
+                </button>
+            </form>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+
+<!-- 2. Chart.js Analytics Section (Revenue Chart & Payment Method Doughnut) -->
+<section class="dashboard-charts-grid">
+    <!-- Left: 7-Day Revenue Chart -->
+    <div class="checkout-card dashboard-chart-card">
+        <div class="checkout-section-title" style="justify-content: space-between;">
+            <span>&#128200; Biểu Đồ Doanh Thu 7 Ngày Gần Nhất (VNĐ)</span>
+            <span style="font-size: 0.78rem; color: var(--accent-red);">REAL-TIME ANALYTICS</span>
+        </div>
+        <div class="chart-canvas-wrapper">
+            <canvas id="revenueBarChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Right: Payment Method Ratio (COD vs VietQR) -->
+    <div class="checkout-card dashboard-chart-card">
+        <div class="checkout-section-title" style="justify-content: space-between;">
+            <span>&#128179; Tỷ Lệ Thanh Toán (COD vs VietQR)</span>
+            <span style="font-size: 0.78rem; color: var(--text-muted);">{{ total_orders_count }} đơn</span>
+        </div>
+        <div class="chart-canvas-wrapper chart-doughnut-wrapper">
+            <canvas id="paymentDoughnutChart"></canvas>
+        </div>
+    </div>
+</section>
+
+<!-- 3. Quick Order Management Table (1-Click Status Update) -->
+<section class="checkout-card" style="margin-bottom: 32px;">
+    <div class="checkout-section-title" style="justify-content: space-between; flex-wrap: wrap;">
+        <span>&#128203; Quản Lý Nhanh Đơn Hàng Mới Nhất (Đổi Trạng Thái 1-Click)</span>
+        <a href="/admin/orders/order/" target="_blank" style="font-size: 0.82rem; color: var(--accent-red); font-weight: 800;">
+            Quản lý nâng cao trong Django Admin &rarr;
+        </a>
+    </div>
+
+    {% if recent_orders %}
+    <div class="cart-table-container" style="margin-bottom: 0;">
+        <table class="cart-table dashboard-orders-table">
+            <thead>
+                <tr>
+                    <th>Mã Đơn</th>
+                    <th>Khách Hàng</th>
+                    <th>Sản Phẩm</th>
+                    <th>Thanh Toán</th>
+                    <th>Tổng Tiền</th>
+                    <th>Trạng Thái Hiện Tại</th>
+                    <th>Đổi Nhanh Trạng Thái (1-Click)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for order in recent_orders %}
+                <tr>
+                    <td>
+                        <a href="{% url 'orders:order_success' order.id %}" class="order-id-link" target="_blank">
+                            #DH{{ order.id }}
+                        </a>
+                        <div class="cart-item-meta">{{ order.created|date:"d/m H:i" }}</div>
+                    </td>
+                    <td>
+                        <strong>{{ order.full_name }}</strong>
+                        <div class="cart-item-meta">{{ order.phone }} &bull; {{ order.city }}</div>
+                    </td>
+                    <td>
+                        {% for item in order.items.all %}
+                            <div style="font-size: 0.85rem;">
+                                &bull; {{ item.product.name }} <strong>(x{{ item.quantity }})</strong>
+                            </div>
+                        {% endfor %}
+                    </td>
+                    <td>
+                        {% if order.payment_method == 'BANK' %}
+                            <span class="payment-pill pill-bank">VietQR</span>
+                        {% else %}
+                            <span class="payment-pill pill-cod">COD</span>
+                        {% endif %}
+                    </td>
+                    <td class="cart-subtotal-cell">
+                        {{ order.total_amount|floatformat:0 }}đ
+                        {% if order.coupon %}
+                            <div style="font-size: 0.72rem; color: #34d399; font-weight: 700;">
+                                Mã: {{ order.coupon.code }} (-{{ order.discount_percent }}%)
+                            </div>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="order-status-pill status-{{ order.status }}">
+                            {{ order.get_status_display }}
+                        </span>
+                    </td>
+                    <td>
+                        <div class="quick-status-btn-group">
+                            <form action="{% url 'dashboard_update_order_status' order.id %}" method="post">
+                                {% csrf_token %}
+                                <input type="hidden" name="status" value="PENDING">
+                                <button type="submit"
+                                        class="btn-quick-status {% if order.status == 'PENDING' %}active{% endif %}"
+                                        title="Đặt là Chờ xử lý">
+                                    Chờ xử lý
+                                </button>
+                            </form>
+
+                            <form action="{% url 'dashboard_update_order_status' order.id %}" method="post">
+                                {% csrf_token %}
+                                <input type="hidden" name="status" value="PAID">
+                                <button type="submit"
+                                        class="btn-quick-status {% if order.status == 'PAID' %}active{% endif %}"
+                                        title="Đặt là Đã thanh toán">
+                                    Đã TT
+                                </button>
+                            </form>
+
+                            <form action="{% url 'dashboard_update_order_status' order.id %}" method="post">
+                                {% csrf_token %}
+                                <input type="hidden" name="status" value="SHIPPING">
+                                <button type="submit"
+                                        class="btn-quick-status {% if order.status == 'SHIPPING' %}active{% endif %}"
+                                        title="Đặt là Đang giao">
+                                    Đang giao
+                                </button>
+                            </form>
+
+                            <form action="{% url 'dashboard_update_order_status' order.id %}" method="post">
+                                {% csrf_token %}
+                                <input type="hidden" name="status" value="COMPLETED">
+                                <button type="submit"
+                                        class="btn-quick-status {% if order.status == 'COMPLETED' %}active{% endif %}"
+                                        title="Đặt là Hoàn thành">
+                                    Hoàn thành
+                                </button>
+                            </form>
+
+                            <form action="{% url 'dashboard_update_order_status' order.id %}" method="post">
+                                {% csrf_token %}
+                                <input type="hidden" name="status" value="CANCELLED">
+                                <button type="submit"
+                                        class="btn-quick-status btn-cancel-status {% if order.status == 'CANCELLED' %}active{% endif %}"
+                                        title="Hủy đơn hàng">
+                                    Hủy
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-box" style="padding: 32px;">
+        <p>Chưa có đơn hàng nào trong hệ thống.</p>
+    </div>
+    {% endif %}
+</section>
+
+<!-- Inventory Overview & Quick Restock Table -->
+<section class="checkout-card">
+    <div class="checkout-section-title" style="justify-content: space-between;">
+        <span>&#127981; Kiểm Soát Tồn Kho Sản Phẩm (Quick Restock)</span>
+        <a href="/admin/shop/product/" target="_blank" style="font-size: 0.82rem; color: var(--accent-red); font-weight: 800;">
+            Thêm / Sửa sản phẩm trong Django Admin &rarr;
+        </a>
+    </div>
+    <div class="cart-table-container" style="margin-bottom: 0;">
+        <table class="cart-table">
+            <thead>
+                <tr>
+                    <th>Sản Phẩm</th>
+                    <th>Danh Mục</th>
+                    <th>Giá Bán</th>
+                    <th>Tồn Kho Hiện Tại</th>
+                    <th>Trạng Thái</th>
+                    <th>Nhập Kho Nhanh (1-Click)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for prod in all_products %}
+                <tr>
+                    <td>
+                        <strong><a href="{{ prod.get_absolute_url }}">{{ prod.name }}</a></strong>
+                        <div class="cart-item-meta">{{ prod.weight }} &bull; Vị: {{ prod.flavor }}</div>
+                    </td>
+                    <td>{{ prod.category.name }}</td>
+                    <td class="cart-price-cell">{{ prod.price|floatformat:0 }}đ</td>
+                    <td>
+                        {% if prod.stock <= 5 %}
+                            <span class="stock-pill-danger">&#9888; {{ prod.stock }} hộp (Sắp hết)</span>
+                        {% else %}
+                            <strong style="color: #4ade80;">{{ prod.stock }} hộp</strong>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if prod.available %}
+                            <span class="order-status-pill status-COMPLETED">Đang bán</span>
+                        {% else %}
+                            <span class="order-status-pill status-CANCELLED">Ngừng bán</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <form action="{% url 'dashboard_quick_restock' prod.id %}" method="post">
+                            {% csrf_token %}
+                            <input type="hidden" name="add_qty" value="15">
+                            <button type="submit" class="btn-update-qty">+ Nhập thêm 15 hộp</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Chart.js Official CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    // 1. GSAP Counter Animation for Overview KPI Cards
+    if (typeof gsap !== "undefined") {
+        const kpiCards = gsap.utils.toArray(".dashboard-kpi-card");
+        gsap.fromTo(
+            kpiCards,
+            { y: 30, autoAlpha: 0 },
+            { y: 0, autoAlpha: 1, duration: 0.6, stagger: 0.1, ease: "power3.out" }
+        );
+
+        gsap.utils.toArray(".dashboard-kpi-counter").forEach((el, idx) => {
+            const target = parseFloat(el.dataset.target || "0");
+            const tracker = { val: 0 };
+            gsap.to(tracker, {
+                val: target,
+                duration: 1.25,
+                delay: idx * 0.08,
+                ease: "power2.out",
+                onUpdate: () => {
+                    el.textContent = Math.round(tracker.val).toLocaleString("vi-VN");
+                }
+            });
+        });
+    }
+
+    // 2. Chart.js Visualizations (Crimson Red #D33F49 & Dark Charcoal Theme)
+    if (typeof Chart === "undefined") return;
+
+    Chart.defaults.color = "#b0b0b0";
+    Chart.defaults.font.family = "'Montserrat', 'Segoe UI', sans-serif";
+
+    const revLabels = {{ revenue_labels_json|safe }};
+    const revValues = {{ revenue_values_json|safe }};
+
+    const barCanvas = document.getElementById("revenueBarChart");
+    if (barCanvas) {
+        const ctx = barCanvas.getContext("2d");
+        const grad = ctx.createLinearGradient(0, 0, 0, 280);
+        grad.addColorStop(0, "rgba(211, 63, 73, 0.9)");
+        grad.addColorStop(1, "rgba(211, 63, 73, 0.18)");
+
+        new Chart(ctx, {
+            type: "bar",
+            data: {
+                labels: revLabels,
+                datasets: [
+                    {
+                        label: "Doanh thu (VNĐ)",
+                        data: revValues,
+                        backgroundColor: grad,
+                        borderColor: "#D33F49",
+                        borderWidth: 2,
+                        borderRadius: 6,
+                        hoverBackgroundColor: "#e04b55"
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        labels: { color: "#F4F4F4", font: { weight: "700" } }
+                    },
+                    tooltip: {
+                        backgroundColor: "#181818",
+                        titleColor: "#F4F4F4",
+                        bodyColor: "#D33F49",
+                        borderColor: "#D33F49",
+                        borderWidth: 1,
+                        callbacks: {
+                            label: (ctx) => " " + Number(ctx.raw).toLocaleString("vi-VN") + " VNĐ"
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { color: "rgba(255, 255, 255, 0.05)" },
+                        ticks: { color: "#b0b0b0", font: { weight: "600" } }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: "rgba(255, 255, 255, 0.07)" },
+                        ticks: {
+                            color: "#b0b0b0",
+                            callback: (value) => Number(value).toLocaleString("vi-VN") + "đ"
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    const doughnutCanvas = document.getElementById("paymentDoughnutChart");
+    if (doughnutCanvas) {
+        const codCount = {{ cod_count }};
+        const bankCount = {{ bank_count }};
+        const hasOrders = codCount + bankCount > 0;
+
+        new Chart(doughnutCanvas.getContext("2d"), {
+            type: "doughnut",
+            data: {
+                labels: ["Chuyển khoản VietQR (BANK)", "Thanh toán khi nhận hàng (COD)"],
+                datasets: [
+                    {
+                        data: hasOrders ? [bankCount, codCount] : [1, 1],
+                        backgroundColor: ["#D33F49", "#3f3f46"],
+                        borderColor: ["#181818", "#181818"],
+                        borderWidth: 3,
+                        hoverOffset: 8
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: "64%",
+                plugins: {
+                    legend: {
+                        position: "bottom",
+                        labels: {
+                            color: "#F4F4F4",
+                            padding: 16,
+                            font: { weight: "700", size: 12 }
+                        }
+                    }
+                }
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

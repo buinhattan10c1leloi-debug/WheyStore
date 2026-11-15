@@ -1,0 +1,407 @@
+{% extends "shop/base.html" %}
+
+{% block title %}{{ product.name }} - {{ product.brand|default:"WheyStore" }} Chính Hãng | WheyStore{% endblock %}
+
+{% block meta_description %}Mua {{ product.name }} chính hãng {{ product.brand }} ({{ product.origin }}) giá chỉ {{ product.price|floatformat:0 }}đ tại WheyStore. Cung cấp {{ product.protein_per_serving }} Protein, {{ product.bcaa_per_serving }}, {{ product.servings }}. {{ product.free_gift }}!{% endblock %}
+
+{% block canonical_url %}{{ request.scheme }}://{{ request.get_host }}{{ product.get_absolute_url }}{% endblock %}
+
+{% block og_type %}product{% endblock %}
+{% block og_title %}{{ product.name }} - {{ product.brand }} ({{ product.origin }}) | Giá {{ product.price|floatformat:0 }}đ{% endblock %}
+{% block og_description %}{{ product.protein_per_serving }} Protein • {{ product.bcaa_per_serving }} • {{ product.servings }} • Vị {{ product.flavor }}. {{ product.free_gift }} tại WheyStore!{% endblock %}
+{% block og_url %}{{ request.scheme }}://{{ request.get_host }}{{ product.get_absolute_url }}{% endblock %}
+{% block og_image %}{{ request.scheme }}://{{ request.get_host }}{% if product.image %}{{ product.image.url }}{% else %}/media/products/rule-1-r1-protein-5lbs.png{% endif %}{% endblock %}
+{% block twitter_title %}{{ product.name }} - {{ product.brand }} Chính Hãng | WheyStore{% endblock %}
+{% block twitter_description %}Mua {{ product.name }} giá ưu đãi {{ product.price|floatformat:0 }}đ. {{ product.free_gift }}!{% endblock %}
+
+{% block structured_data %}
+<!-- Google Rich Results JSON-LD Product & BreadcrumbList Schema (built with claude-seo / seo-schema / seo-ecommerce) -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Product",
+  "name": "{{ product.name|escapejs }}",
+  "image": [
+    "{{ request.scheme }}://{{ request.get_host }}{% if product.image %}{{ product.image.url }}{% else %}/media/products/rule-1-r1-protein-5lbs.png{% endif %}"
+  ],
+  "description": "{{ product.description|escapejs }}",
+  "sku": "WHEY-{{ product.id }}",
+  "mpn": "WS-{{ product.slug|upper }}",
+  "category": "{{ product.category.name|escapejs }}",
+  "brand": {
+    "@type": "Brand",
+    "name": "{{ product.brand|default:'WheyStore'|escapejs }}"
+  },
+  "offers": {
+    "@type": "Offer",
+    "url": "{{ request.scheme }}://{{ request.get_host }}{{ product.get_absolute_url }}",
+    "priceCurrency": "VND",
+    "price": "{{ product.price|floatformat:0 }}",
+    "priceValidUntil": "2027-12-31",
+    "availability": "{% if product.available and product.stock > 0 %}https://schema.org/InStock{% else %}https://schema.org/OutOfStock{% endif %}",
+    "itemCondition": "https://schema.org/NewCondition",
+    "seller": {
+      "@type": "Organization",
+      "name": "WheyStore"
+    }
+  },
+  "aggregateRating": {
+    "@type": "AggregateRating",
+    "ratingValue": "{{ product.average_rating }}",
+    "bestRating": "5",
+    "worstRating": "1",
+    "reviewCount": "{{ product.review_count|default:1 }}"
+  }{% if reviews %},
+  "review": [
+    {% for rev in reviews %}
+    {
+      "@type": "Review",
+      "author": {
+        "@type": "Person",
+        "name": "{{ rev.user_name|escapejs }}"
+      },
+      "datePublished": "{{ rev.created|date:'Y-m-d' }}",
+      "reviewBody": "{{ rev.comment|escapejs }}",
+      "reviewRating": {
+        "@type": "Rating",
+        "ratingValue": "{{ rev.rating }}",
+        "bestRating": "5",
+        "worstRating": "1"
+      }
+    }{% if not forloop.last %},{% endif %}
+    {% endfor %}
+  ]{% endif %}
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Trang Chủ",
+      "item": "{{ request.scheme }}://{{ request.get_host }}{% url 'shop:product_list' %}"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "{{ product.category.name|escapejs }}",
+      "item": "{{ request.scheme }}://{{ request.get_host }}{{ product.category.get_absolute_url }}"
+    },
+    {
+      "@type": "ListItem",
+      "position": 3,
+      "name": "{{ product.name|escapejs }}",
+      "item": "{{ request.scheme }}://{{ request.get_host }}{{ product.get_absolute_url }}"
+    }
+  ]
+}
+</script>
+{% endblock %}
+
+{% block content %}
+<!-- Breadcrumb Path -->
+<nav class="breadcrumbs">
+    <a href="{% url 'shop:product_list' %}">Trang Chủ</a>
+    <span class="separator">/</span>
+    <a href="{{ product.category.get_absolute_url }}">{{ product.category.name }}</a>
+    <span class="separator">/</span>
+    <span class="current">{{ product.name }}</span>
+</nav>
+
+<!-- Product Detail Container -->
+<div class="product-detail-container">
+    <!-- Left Column: Large Image -->
+    <div class="detail-image-box">
+        {% if product.image %}
+            <img src="{{ product.image.url }}" alt="{{ product.name }}">
+        {% else %}
+            <div class="card-image-placeholder">
+                <svg class="placeholder-tub-svg" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="30" y="12" width="60" height="14" rx="4" fill="#D33F49"/>
+                    <rect x="34" y="26" width="52" height="6" fill="#181818"/>
+                    <path d="M24 38C24 33.5817 27.5817 30 32 30H88C92.4183 30 96 33.5817 96 38V98C96 103.523 91.5228 108 86 108H34C28.4772 108 24 103.523 24 98V38Z" fill="#2A2A2A" stroke="#4A4A4A" stroke-width="2"/>
+                    <rect x="25" y="46" width="70" height="44" fill="#161616"/>
+                    <rect x="25" y="46" width="70" height="4" fill="#D33F49"/>
+                    <rect x="25" y="86" width="70" height="4" fill="#D33F49"/>
+                    <path d="M63 54L51 69H60L57 82L69 67H60L63 54Z" fill="#D33F49"/>
+                </svg>
+                <span class="placeholder-brand">100% {{ product.category.name }}</span>
+                <span class="placeholder-text">{{ product.weight|default:"PRO SERIES" }} &bull; {{ product.flavor|default:"ORIGINAL" }}</span>
+            </div>
+        {% endif %}
+
+        {% if product.available %}
+            <span class="stock-badge stock-in">&#10004; Còn hàng ({{ product.stock }})</span>
+        {% else %}
+            <span class="stock-badge stock-out">&#10006; Hết hàng</span>
+        {% endif %}
+
+        {% if product.old_price and product.old_price > product.price %}
+            <span class="badge-discount-red detail-discount-badge">GIẢM -{{ product.discount_percent }}%</span>
+        {% endif %}
+    </div>
+
+    <!-- Right Column: Detail Information -->
+    <div class="detail-info">
+        <div class="detail-top-badges">
+            <span class="detail-category-badge">{{ product.category.name }}</span>
+            {% if product.brand %}
+                <span class="brand-badge">{{ product.brand }}</span>
+            {% endif %}
+            {% if product.origin %}
+                <span class="origin-badge">&#127758; Xuất xứ: {{ product.origin }}</span>
+            {% endif %}
+        </div>
+
+        <h1 class="detail-title">{{ product.name }}</h1>
+
+        <!-- Average Rating Badge -->
+        <div class="detail-rating-bar">
+            <span class="stars-gold">&#9733;&#9733;&#9733;&#9733;&#9733;</span>
+            <span class="rating-score">{{ product.average_rating }} / 5.0</span>
+            <a href="#product-reviews" class="rating-count">({{ product.review_count }} đánh giá từ Gymer đã mua)</a>
+        </div>
+
+        <!-- Price & Crossed-out Old Price -->
+        <div class="detail-price-box">
+            <span class="detail-price">{{ product.price|floatformat:0 }}</span>
+            <span class="detail-currency">VNĐ</span>
+            {% if product.old_price and product.old_price > product.price %}
+                <del class="detail-old-price">{{ product.old_price|floatformat:0 }}đ</del>
+                <span class="detail-save-pill">Tiết kiệm -{{ product.discount_percent }}%</span>
+            {% endif %}
+        </div>
+
+        <!-- Free Gift Promo Banner -->
+        <div class="detail-free-gift-banner">
+            <span class="gift-icon">&#127873;</span>
+            <div>
+                <strong>QUÀ TẶNG ĐẶC QUYỀN TẠI WHEYSTORE:</strong>
+                <p>{{ product.free_gift|default:"Tặng Bình Lắc Shaker + Freeship" }} cho mọi đơn hàng đặt hôm nay!</p>
+            </div>
+        </div>
+
+        <!-- Specs Panel -->
+        <div class="specs-panel">
+            <div class="spec-item">
+                <span class="spec-label">Thương hiệu &amp; Xuất xứ</span>
+                <span class="spec-value">{{ product.brand|default:"Chính hãng" }} ({{ product.origin|default:"USA" }})</span>
+            </div>
+            <div class="spec-item">
+                <span class="spec-label">Trọng lượng / Số lần dùng</span>
+                <span class="spec-value">{{ product.weight|default:"Tiêu chuẩn" }} &bull; {{ product.servings|default:"70 Servings" }}</span>
+            </div>
+            <div class="spec-item">
+                <span class="spec-label">Hương vị (Flavor)</span>
+                <span class="spec-value">{{ product.flavor|default:"Tự nhiên" }}</span>
+            </div>
+            <div class="spec-item">
+                <span class="spec-label">Tình trạng kho</span>
+                <span class="spec-value">
+                    {% if product.stock > 0 %}
+                        {{ product.stock }} hộp sẵn sàng giao ngay
+                    {% else %}
+                        Tạm hết hàng
+                    {% endif %}
+                </span>
+            </div>
+        </div>
+
+        <!-- Nutrition Facts Panel (Dynamic per Product with GSAP Progress Bars & Counters) -->
+        <div class="nutrition-facts-panel" id="nutrition-facts">
+            <div class="nutrition-header">
+                <h3 class="nutrition-title">&#9889; THÀNH PHẦN DINH DƯỠNG (NUTRITION FACTS)</h3>
+                <span class="nutrition-serving">{{ product.servings|default:"1 Serving" }} ({{ product.weight }})</span>
+            </div>
+
+            <div class="nutrition-bars-list">
+                <!-- 1. Protein per Serving -->
+                <div class="nutrition-bar-item">
+                    <div class="nutrition-bar-top">
+                        <span class="nutrition-metric-name">
+                            Protein <span class="nutrition-metric-tag">({{ product.protein_per_serving }} / Serving)</span>
+                        </span>
+                        <span class="nutrition-metric-value">
+                            <span class="nutrition-counter"
+                                  data-target="{{ product.protein_number }}"
+                                  data-decimals="{{ product.protein_decimals }}">{{ product.protein_number }}</span>g
+                        </span>
+                    </div>
+                    <div class="nutrition-bar-track">
+                        <div class="nutrition-bar-fill" data-progress="{{ product.protein_progress }}"></div>
+                    </div>
+                </div>
+
+                <!-- 2. BCAAs / Active Matrix per Serving -->
+                <div class="nutrition-bar-item">
+                    <div class="nutrition-bar-top">
+                        <span class="nutrition-metric-name">
+                            BCAA &amp; Hoạt chất <span class="nutrition-metric-tag">({{ product.bcaa_per_serving }})</span>
+                        </span>
+                        <span class="nutrition-metric-value">
+                            <span class="nutrition-counter"
+                                  data-target="{{ product.bcaa_number }}"
+                                  data-decimals="{{ product.bcaa_decimals }}">{{ product.bcaa_number }}</span> {{ product.bcaa_label_suffix }}
+                        </span>
+                    </div>
+                    <div class="nutrition-bar-track">
+                        <div class="nutrition-bar-fill" data-progress="{{ product.bcaa_progress }}"></div>
+                    </div>
+                </div>
+
+                <!-- 3. Calories per Serving -->
+                <div class="nutrition-bar-item">
+                    <div class="nutrition-bar-top">
+                        <span class="nutrition-metric-name">
+                            Calories <span class="nutrition-metric-tag">({{ product.calories }} / Serving)</span>
+                        </span>
+                        <span class="nutrition-metric-value">
+                            <span class="nutrition-counter"
+                                  data-target="{{ product.calories_number }}"
+                                  data-decimals="0">{{ product.calories_number }}</span> kcal
+                        </span>
+                    </div>
+                    <div class="nutrition-bar-track">
+                        <div class="nutrition-bar-fill" data-progress="{{ product.calories_progress }}"></div>
+                    </div>
+                </div>
+
+                <!-- 4. Sugar per Serving -->
+                <div class="nutrition-bar-item">
+                    <div class="nutrition-bar-top">
+                        <span class="nutrition-metric-name">
+                            Đường (Sugar) <span class="nutrition-metric-tag">({{ product.sugar }} / Serving)</span>
+                        </span>
+                        <span class="nutrition-metric-value" style="color: #34d399;">
+                            <span class="nutrition-counter"
+                                  data-target="{{ product.sugar_number }}"
+                                  data-decimals="0">{{ product.sugar_number }}</span>g
+                        </span>
+                    </div>
+                    <div class="nutrition-bar-track">
+                        <div class="nutrition-bar-fill fill-clean" data-progress="{{ product.sugar_progress }}"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="nutrition-footer-note">
+                <span>* Cam kết 100% chính hãng {{ product.brand }} ({{ product.origin }}) có tem xác thực.</span>
+                <span style="color: var(--accent-red); font-weight: 800;">GMP &amp; LAB TESTED</span>
+            </div>
+        </div>
+
+        <!-- Description Box -->
+        <div class="detail-desc-box">
+            <h3 class="desc-title">Mô Tả Sản Phẩm &amp; Hướng Dẫn Sử Dụng</h3>
+            <div class="desc-content">
+                {{ product.description|default:"Chưa có mô tả chi tiết cho sản phẩm này. Hãy liên hệ hỗ trợ hoặc cập nhật tại trang quản trị Admin." }}
+            </div>
+        </div>
+
+        <!-- Action Buttons & CartAddProductForm -->
+        <div class="detail-actions">
+            {% if product.available and product.stock > 0 %}
+                <form action="{% url 'cart:cart_add' product.id %}" method="post" class="detail-cart-form">
+                    <div class="detail-qty-group">
+                        <label for="{{ cart_product_form.quantity.id_for_label }}">Số lượng:</label>
+                        {{ cart_product_form.quantity }}
+                    </div>
+                    {{ cart_product_form.override }}
+                    {% csrf_token %}
+                    <button type="submit" class="btn-buy btn-large" style="flex: 1.5; justify-content: center;">
+                        <span>&#128722; Thêm vào giỏ</span>
+                    </button>
+                    <a href="{% url 'shop:product_list' %}" class="btn-secondary btn-large" style="flex: 1; text-align: center;">
+                        Quay Lại
+                    </a>
+                </form>
+            {% else %}
+                <button type="button" class="btn-buy btn-large" style="flex: 1.5; justify-content: center; background-color: var(--border-light); cursor: not-allowed;" disabled>
+                    <span>Tạm Hết Hàng</span>
+                </button>
+                <a href="{% url 'shop:product_list' %}" class="btn-secondary btn-large" style="flex: 1; text-align: center;">
+                    Quay Lại
+                </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- 3. Hệ Thống Đánh Giá Sản Phẩm (Customer Reviews) -->
+<section class="reviews-section" id="product-reviews">
+    <div class="reviews-grid-layout">
+        <!-- Left: Submit Review Form -->
+        <div class="checkout-card">
+            <h2 class="checkout-section-title">
+                <span>&#9733; Gửi Đánh Giá Của Bạn</span>
+            </h2>
+            <p style="color: var(--text-secondary); font-size: 0.88rem; margin-bottom: 18px;">
+                Bạn đã sử dụng <strong>{{ product.name }}</strong>? Hãy chia sẻ đánh giá thực tế giúp cộng đồng Gymer lựa chọn tốt hơn!
+            </p>
+            <form action="{{ product.get_absolute_url }}" method="post">
+                {% csrf_token %}
+                <input type="hidden" name="submit_review" value="1">
+                <div class="form-group">
+                    <label for="{{ review_form.user_name.id_for_label }}">Họ và tên của bạn <span class="req">*</span></label>
+                    {{ review_form.user_name }}
+                </div>
+                <div class="form-group">
+                    <label for="{{ review_form.rating.id_for_label }}">Chấm điểm chất lượng <span class="req">*</span></label>
+                    {{ review_form.rating }}
+                </div>
+                <div class="form-group">
+                    <label for="{{ review_form.comment.id_for_label }}">Nhận xét chi tiết <span class="req">*</span></label>
+                    {{ review_form.comment }}
+                </div>
+                <button type="submit" class="btn-buy btn-large" style="width: 100%; justify-content: center;">
+                    <span>&#9733; Gửi Đánh Giá Ngay</span>
+                </button>
+            </form>
+        </div>
+
+        <!-- Right: Reviews List -->
+        <div class="checkout-card">
+            <div class="checkout-section-title" style="justify-content: space-between;">
+                <span>&#128172; Đánh Giá Từ Khách Hàng ({{ reviews|length }})</span>
+                <span class="stars-gold" style="font-size: 1rem;">&#9733; {{ product.average_rating }}/5.0</span>
+            </div>
+
+            {% if reviews %}
+            <div class="reviews-list">
+                {% for rev in reviews %}
+                <article class="review-item-card">
+                    <div class="review-item-header">
+                        <div class="review-author-box">
+                            <span class="review-avatar">{{ rev.user_name|slice:":1"|upper }}</span>
+                            <div>
+                                <h4 class="review-author-name">{{ rev.user_name }}</h4>
+                                {% if rev.verified_purchase %}
+                                <span class="verified-badge">&#10004; Đã mua hàng tại WheyStore</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="review-meta-right">
+                            <div class="stars-gold">
+                                {% for i in "12345" %}
+                                    {% if forloop.counter <= rev.rating %}&#9733;{% else %}&#9734;{% endif %}
+                                {% endfor %}
+                            </div>
+                            <span class="review-date">{{ rev.created|date:"d/m/Y H:i" }}</span>
+                        </div>
+                    </div>
+                    <p class="review-comment-text">{{ rev.comment }}</p>
+                </article>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-box" style="padding: 32px 16px;">
+                <p>Chưa có đánh giá nào. Hãy là người đầu tiên đánh giá sản phẩm này!</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</section>
+{% endblock %}

@@ -1,0 +1,163 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}WheyStore - Thực Phẩm Bổ Sung Whey Protein, Mass Gainer &amp; Pre-Workout Chính Hãng{% endblock %}</title>
+    <meta name="description" content="{% block meta_description %}WheyStore chuyên cung cấp Whey Protein Isolate, Hydrolyzed, Mass Gainer và Pre-Workout nhập khẩu chính hãng 100% từ Mỹ &amp; Châu Âu. Tặng Bình Lắc Shaker + Freeship toàn quốc!{% endblock %}">
+    <meta name="robots" content="{% block meta_robots %}index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1{% endblock %}">
+
+    <!-- Canonical URL -->
+    <link rel="canonical" href="{% block canonical_url %}{{ request.scheme }}://{{ request.get_host }}{{ request.path }}{% endblock %}">
+
+    <!-- Open Graph / Facebook / Zalo Dynamic Meta Tags -->
+    <meta property="og:site_name" content="WheyStore">
+    <meta property="og:locale" content="vi_VN">
+    <meta property="og:type" content="{% block og_type %}website{% endblock %}">
+    <meta property="og:title" content="{% block og_title %}WheyStore - Thực Phẩm Bổ Sung Thể Hình Chính Hãng 100%{% endblock %}">
+    <meta property="og:description" content="{% block og_description %}Cam kết 100% Whey Protein Isolate, Hydrolyzed, Mass Gainer &amp; Pre-Workout chính hãng từ USA, UK, Poland. Tặng Bình Lắc Shaker + Freeship toàn quốc!{% endblock %}">
+    <meta property="og:url" content="{% block og_url %}{{ request.scheme }}://{{ request.get_host }}{{ request.path }}{% endblock %}">
+    <meta property="og:image" content="{% block og_image %}{{ request.scheme }}://{{ request.get_host }}/media/products/rule-1-r1-protein-5lbs.png{% endblock %}">
+    <meta property="og:image:width" content="800">
+    <meta property="og:image:height" content="800">
+
+    <!-- Twitter Card Meta Tags -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{% block twitter_title %}WheyStore - Thực Phẩm Bổ Sung Thể Hình Chính Hãng 100%{% endblock %}">
+    <meta name="twitter:description" content="{% block twitter_description %}Cam kết 100% Whey Protein Isolate, Hydrolyzed, Mass Gainer &amp; Pre-Workout chính hãng. Tặng Bình Lắc Shaker + Freeship!{% endblock %}">
+
+    <!-- Global Organization & WebSite JSON-LD Schema -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Organization",
+          "@id": "{{ request.scheme }}://{{ request.get_host }}/#organization",
+          "name": "WheyStore",
+          "url": "{{ request.scheme }}://{{ request.get_host }}/",
+          "logo": "{{ request.scheme }}://{{ request.get_host }}/media/products/rule-1-r1-protein-5lbs.png",
+          "contactPoint": {
+            "@type": "ContactPoint",
+            "telephone": "+84-1900-8888",
+            "contactType": "customer service",
+            "areaServed": "VN",
+            "availableLanguage": ["Vietnamese", "English"]
+          }
+        },
+        {
+          "@type": "WebSite",
+          "@id": "{{ request.scheme }}://{{ request.get_host }}/#website",
+          "url": "{{ request.scheme }}://{{ request.get_host }}/",
+          "name": "WheyStore - Thực Phẩm Bổ Sung Thể Hình Chính Hãng",
+          "publisher": {
+            "@id": "{{ request.scheme }}://{{ request.get_host }}/#organization"
+          },
+          "potentialAction": {
+            "@type": "SearchAction",
+            "target": "{{ request.scheme }}://{{ request.get_host }}/?q={search_term_string}",
+            "query-input": "required name=search_term_string"
+          }
+        }
+      ]
+    }
+    </script>
+    {% block structured_data %}{% endblock %}
+
+    <!-- Google Fonts for fitness bold look -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,400;0,600;0,700;0,800;0,900;1,800&display=swap" rel="stylesheet">
+    <!-- WheyStore Fitness Theme CSS -->
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Site Header -->
+    <header class="site-header">
+        <div class="header-container">
+            <a href="{% url 'shop:product_list' %}" class="brand-logo">
+                <span class="logo-icon">&#9889;</span>
+                <span>Whey<span class="accent">Store</span></span>
+            </a>
+            <ul class="nav-links">
+                <li class="nav-item">
+                    <a href="{% url 'shop:product_list' %}">Sản Phẩm</a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'shop:product_list' %}#macro-calculator">Tính Macro &amp; TDEE</a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'orders:order_track' %}">Tra cứu đơn hàng</a>
+                </li>
+                <li class="nav-item">
+                    {% with total_items=cart|length %}
+                    <a href="{% url 'cart:cart_detail' %}"
+                       class="header-cart-link"
+                       id="header-cart-btn"
+                       data-cart-count="{{ total_items }}"
+                       title="Xem giỏ hàng của bạn">
+                        <span class="cart-icon-red">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M7 18C5.9 18 5.01 18.9 5.01 20C5.01 21.1 5.9 22 7 22C8.1 22 9 21.1 9 20C9 18.9 8.1 18 7 18ZM1 2V4H3L6.6 11.59L5.25 14.04C5.09 14.32 5 14.65 5 15C5 16.1 5.9 17 7 17H19V15H7.42C7.28 15 7.17 14.89 7.17 14.75L7.2 14.63L8.1 13H15.55C16.3 13 16.96 12.59 17.3 11.97L20.88 5.48C20.96 5.34 21 5.17 21 5C21 4.45 20.55 4 20 4H5.21L4.27 2H1ZM17 18C15.9 18 15.01 18.9 15.01 20C15.01 21.1 15.9 22 17 22C18.1 22 19 21.1 19 20C19 18.9 18.1 18 17 18Z"/>
+                            </svg>
+                        </span>
+                        <span>Giỏ hàng</span>
+                        <span class="cart-badge-count" id="header-cart-badge">{{ total_items }}</span>
+                        {% if total_items > 0 %}
+                            <span class="cart-header-total">{{ cart.get_total_price_after_discount|floatformat:0 }}đ</span>
+                        {% else %}
+                            <span class="cart-header-total">0đ</span>
+                        {% endif %}
+                    </a>
+                    {% endwith %}
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'dashboard' %}" class="admin-btn">&#9889; Admin</a>
+                </li>
+            </ul>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="main-wrapper">
+        {% if messages %}
+        <div class="flash-messages-container">
+            {% for message in messages %}
+            <div class="flash-alert flash-{{ message.tags }}">
+                <span>&#9889; {{ message }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% block content %}
+        {% endblock %}
+    </main>
+
+    <!-- Site Footer -->
+    <footer class="site-footer">
+        <div class="footer-container">
+            <div class="footer-brand">
+                <span>&#9889; Whey</span><span>Store</span>
+            </div>
+            <p class="footer-slogan">
+                Thương hiệu dinh dưỡng thể hình hàng đầu &bull; 100% Chính Hãng &bull; Bứt Phá Sức Mạnh Vượt Trội
+            </p>
+            <div class="footer-bottom">
+                &copy; 2026 WheyStore Inc. All rights reserved. Thiết kế dành riêng cho Gymer &amp; Fitness Athletes.
+            </div>
+        </div>
+    </footer>
+
+    <!-- Official GSAP 3.12+ CDN (Core, ScrollTrigger, Flip, TextPlugin) -->
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.7/dist/gsap.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.7/dist/ScrollTrigger.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.7/dist/Flip.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.7/dist/TextPlugin.min.js" defer></script>
+    <!-- WheyStore Custom GSAP Animations -->
+    <script src="{% static 'js/animations.js' %}" defer></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

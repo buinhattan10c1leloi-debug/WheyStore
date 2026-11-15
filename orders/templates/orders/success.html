@@ -1,0 +1,179 @@
+{% extends "shop/base.html" %}
+
+{% block title %}Đặt Hàng Thành Công #DH{{ order.id }} | WheyStore{% endblock %}
+
+{% block content %}
+<!-- Success Hero Banner -->
+<section class="success-hero-banner">
+    <div>
+        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+            <span style="font-size: 2rem;">&#9989;</span>
+            <h1 style="font-size: 1.8rem; font-weight: 900; text-transform: uppercase;">
+                Đặt Hàng Thành Công!
+            </h1>
+        </div>
+        <p style="color: var(--text-secondary);">
+            Cảm ơn <strong>{{ order.full_name }}</strong> đã tin tưởng lựa chọn thực phẩm bổ sung tại <strong>WheyStore</strong>.
+        </p>
+    </div>
+    <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 8px;">
+        <span class="success-badge-id">MÃ ĐƠN: #DH{{ order.id }}</span>
+        <span class="order-status-pill status-{{ order.status }}">{{ order.get_status_display }}</span>
+    </div>
+</section>
+
+<div class="checkout-layout">
+    <!-- Left Column: Order Details & Recipient Info -->
+    <div class="checkout-card">
+        <h2 class="checkout-section-title">
+            <span>&#128230; Chi Tiết Đơn Hàng #DH{{ order.id }}</span>
+        </h2>
+
+        <!-- Recipient Information -->
+        <div class="specs-panel" style="margin-bottom: 28px;">
+            <div class="spec-item">
+                <span class="spec-label">Người nhận</span>
+                <span class="spec-value">{{ order.full_name }}</span>
+            </div>
+            <div class="spec-item">
+                <span class="spec-label">Số điện thoại</span>
+                <span class="spec-value">{{ order.phone }}</span>
+            </div>
+            <div class="spec-item">
+                <span class="spec-label">Địa chỉ giao hàng</span>
+                <span class="spec-value">{{ order.address }}, {{ order.city }}</span>
+            </div>
+            <div class="spec-item">
+                <span class="spec-label">Hình thức thanh toán</span>
+                <span class="spec-value" style="color: var(--accent-red);">{{ order.get_payment_method_display }}</span>
+            </div>
+            {% if order.email %}
+            <div class="spec-item">
+                <span class="spec-label">Email</span>
+                <span class="spec-value">{{ order.email }}</span>
+            </div>
+            {% endif %}
+            {% if order.note %}
+            <div class="spec-item">
+                <span class="spec-label">Ghi chú</span>
+                <span class="spec-value">{{ order.note }}</span>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Ordered Items Table -->
+        <h3 class="desc-title" style="margin-bottom: 14px;">Danh Sách Sản Phẩm Đã Đặt</h3>
+        <div class="cart-table-container" style="margin-bottom: 24px;">
+            <table class="cart-table">
+                <thead>
+                    <tr>
+                        <th>Sản Phẩm</th>
+                        <th>SL</th>
+                        <th>Đơn Giá</th>
+                        <th>Thành Tiền</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in order.items.all %}
+                    <tr>
+                        <td>
+                            <strong>{{ item.product.name }}</strong>
+                            <div class="cart-item-meta">
+                                {% if item.product.weight %}{{ item.product.weight }}{% endif %}
+                                {% if item.product.flavor %} &bull; Vị: {{ item.product.flavor }}{% endif %}
+                            </div>
+                        </td>
+                        <td><strong>x{{ item.quantity }}</strong></td>
+                        <td class="cart-price-cell">{{ item.price|floatformat:0 }} đ</td>
+                        <td class="cart-subtotal-cell">{{ item.get_cost|floatformat:0 }} đ</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if order.discount_amount > 0 %}
+        <div class="coupon-breakdown" style="margin-bottom: 12px;">
+            <div class="breakdown-row">
+                <span>Tạm tính:</span>
+                <strong>{{ order.get_subtotal_cost|floatformat:0 }} VNĐ</strong>
+            </div>
+            <div class="breakdown-row discount-active">
+                <span>Mã giảm giá {% if order.coupon %}<strong>({{ order.coupon.code }})</strong>{% endif %} (-{{ order.discount_percent }}%):</span>
+                <strong>-{{ order.discount_amount|floatformat:0 }} VNĐ</strong>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="checkout-total-row">
+            <span class="checkout-total-label">Tổng thanh toán:</span>
+            <span class="checkout-total-price">{{ order.total_amount|floatformat:0 }} VNĐ</span>
+        </div>
+
+        <div class="detail-actions" style="margin-top: 28px;">
+            <a href="{% url 'orders:order_track' %}?q={{ order.phone }}" class="btn-secondary btn-large" style="flex: 1; text-align: center;">
+                &#128269; Tra Cứu Trạng Thái Đơn
+            </a>
+            <a href="{% url 'shop:product_list' %}" class="btn-buy btn-large" style="flex: 1; justify-content: center;">
+                <span>Tiếp Tục Mua Sắm &rarr;</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Right Column: VietQR Payment Box (if BANK) or COD Notice -->
+    <aside>
+        {% if order.payment_method == 'BANK' %}
+        <div class="vietqr-box">
+            <span class="vietqr-header-tag">&#9889; QUÉT MÃ VIETQR TỰ ĐỘNG</span>
+            <h3 style="font-size: 1.25rem; font-weight: 900; text-transform: uppercase;">
+                Chuyển Khoản Ngân Hàng 24/7
+            </h3>
+            <p style="font-size: 0.85rem; color: var(--text-secondary);">
+                Mở ứng dụng Ngân hàng bất kỳ và quét mã QR bên dưới (Đã điền sẵn số tiền & nội dung):
+            </p>
+
+            <div class="vietqr-frame">
+                <img src="https://img.vietqr.io/image/MB-0123456789-compact2.png?amount={{ order.total_amount|floatformat:0 }}&addInfo=WHEYSTORE%20DH{{ order.id }}&accountName=WHEYSTORE"
+                     alt="Mã VietQR Thanh Toán Đơn Hàng #DH{{ order.id }}">
+            </div>
+
+            <div class="vietqr-bank-details">
+                <div class="vietqr-bank-row">
+                    <span class="label">Ngân hàng:</span>
+                    <span class="val">MB Bank (Quân Đội)</span>
+                </div>
+                <div class="vietqr-bank-row">
+                    <span class="label">Số tài khoản:</span>
+                    <span class="val">0123456789</span>
+                </div>
+                <div class="vietqr-bank-row">
+                    <span class="label">Chủ tài khoản:</span>
+                    <span class="val">WHEYSTORE</span>
+                </div>
+                <div class="vietqr-bank-row">
+                    <span class="label">Số tiền:</span>
+                    <span class="val highlight">{{ order.total_amount|floatformat:0 }} VNĐ</span>
+                </div>
+                <div class="vietqr-bank-row">
+                    <span class="label">Nội dung CK:</span>
+                    <span class="val highlight">WHEYSTORE DH{{ order.id }}</span>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="checkout-card" style="border-top: 4px solid var(--accent-red); text-align: center;">
+            <div style="font-size: 3.5rem; margin-bottom: 12px;">&#128666;</div>
+            <h3 style="font-size: 1.3rem; font-weight: 900; text-transform: uppercase; margin-bottom: 10px;">
+                Thanh Toán Khi Nhận Hàng (COD)
+            </h3>
+            <p style="color: var(--text-secondary); font-size: 0.92rem; margin-bottom: 18px;">
+                Đơn hàng <strong>#DH{{ order.id }}</strong> đang được đóng gói tại kho WheyStore. Bạn chỉ cần thanh toán đúng số tiền <strong>{{ order.total_amount|floatformat:0 }} VNĐ</strong> cho nhân viên giao hàng khi kiểm tra và nhận sản phẩm.
+            </p>
+            <div style="background-color: var(--bg-secondary); border: 1px solid var(--border-color); padding: 14px; border-radius: 8px; font-size: 0.85rem; color: var(--text-muted);">
+                📞 Hotline hỗ trợ Gymer: <strong style="color: var(--text-primary);">1900 8888</strong>
+            </div>
+        </div>
+        {% endif %}
+    </aside>
+</div>
+{% endblock %}

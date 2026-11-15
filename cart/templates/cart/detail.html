@@ -1,0 +1,178 @@
+{% extends "shop/base.html" %}
+{% load static %}
+
+{% block title %}Giỏ Hàng Của Bạn | WheyStore{% endblock %}
+
+{% block content %}
+<!-- Breadcrumb -->
+<nav class="breadcrumbs">
+    <a href="{% url 'shop:product_list' %}">Trang Chủ</a>
+    <span class="separator">/</span>
+    <span class="current">Giỏ Hàng</span>
+</nav>
+
+<div class="cart-page-header">
+    <h1 class="cart-page-title">
+        <span>&#128722; Giỏ Hàng</span>
+        <span class="accent">Fitness</span>
+    </h1>
+    <span class="product-count">{{ cart|length }} sản phẩm trong giỏ</span>
+</div>
+
+{% if cart|length > 0 %}
+    <!-- Cart Items Table -->
+    <div class="cart-table-container">
+        <table class="cart-table">
+            <thead>
+                <tr>
+                    <th>Sản Phẩm</th>
+                    <th>Số Lượng</th>
+                    <th>Đơn Giá</th>
+                    <th>Thành Tiền</th>
+                    <th>Thao Tác</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in cart %}
+                    {% with product=item.product %}
+                    <tr>
+                        <!-- Product Thumbnail & Info -->
+                        <td>
+                            <div class="cart-product-cell">
+                                <a href="{{ product.get_absolute_url }}" class="cart-item-thumb">
+                                    {% if product.image %}
+                                        <img src="{{ product.image.url }}" alt="{{ product.name }}">
+                                    {% else %}
+                                        <svg width="42" height="42" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                            <rect x="30" y="12" width="60" height="14" rx="4" fill="#D33F49"/>
+                                            <rect x="34" y="26" width="52" height="6" fill="#181818"/>
+                                            <path d="M24 38C24 33.5817 27.5817 30 32 30H88C92.4183 30 96 33.5817 96 38V98C96 103.523 91.5228 108 86 108H34C28.4772 108 24 103.523 24 98V38Z" fill="#2A2A2A" stroke="#4A4A4A" stroke-width="2"/>
+                                            <rect x="25" y="46" width="70" height="44" fill="#161616"/>
+                                            <path d="M63 54L51 69H60L57 82L69 67H60L63 54Z" fill="#D33F49"/>
+                                        </svg>
+                                    {% endif %}
+                                </a>
+                                <div class="cart-item-info">
+                                    <h4>
+                                        <a href="{{ product.get_absolute_url }}">{{ product.name }}</a>
+                                    </h4>
+                                    <div class="cart-item-meta">
+                                        <span>Danh mục: {{ product.category.name }}</span>
+                                        {% if product.weight %} &bull; <span>{{ product.weight }}</span>{% endif %}
+                                        {% if product.flavor %} &bull; <span>Vị: {{ product.flavor }}</span>{% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+
+                        <!-- Update Quantity Form -->
+                        <td>
+                            <form action="{% url 'cart:cart_add' product.id %}" method="post" class="cart-qty-form">
+                                {{ item.update_quantity_form.quantity }}
+                                {{ item.update_quantity_form.override }}
+                                {% csrf_token %}
+                                <button type="submit" class="btn-update-qty">Cập nhật</button>
+                            </form>
+                        </td>
+
+                        <!-- Unit Price -->
+                        <td class="cart-price-cell">
+                            {{ item.price|floatformat:0 }} VNĐ
+                        </td>
+
+                        <!-- Subtotal -->
+                        <td class="cart-subtotal-cell">
+                            {{ item.total_price|floatformat:0 }} <span style="color: var(--accent-red); font-size: 0.85rem;">VNĐ</span>
+                        </td>
+
+                        <!-- Remove Action -->
+                        <td>
+                            <form action="{% url 'cart:cart_remove' product.id %}" method="post">
+                                {% csrf_token %}
+                                <button type="submit" class="btn-remove-item" title="Xóa khỏi giỏ">
+                                    &#10006; Xóa
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endwith %}
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Coupon Box + Cart Summary Grid -->
+    <div class="cart-bottom-grid">
+        <!-- Left: Coupon / Voucher Form -->
+        <div class="checkout-card">
+            <h3 class="checkout-section-title" style="margin-bottom: 14px; font-size: 1.1rem;">
+                <span>&#127991; Mã Giảm Giá / Voucher</span>
+            </h3>
+            <form action="{% url 'cart:coupon_apply' %}" method="post" class="coupon-form-row">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{% url 'cart:cart_detail' %}">
+                {{ coupon_apply_form.code }}
+                <button type="submit" class="btn-buy" style="white-space: nowrap; padding: 12px 20px;">
+                    Áp Dụng
+                </button>
+            </form>
+            <div class="coupon-hints">
+                <span>Mã khả dụng:</span>
+                <span class="coupon-pill" onclick="document.querySelector('.coupon-input').value='GYMBRO10'">GYMBRO10 (-10%)</span>
+                <span class="coupon-pill" onclick="document.querySelector('.coupon-input').value='WHEYVIP20'">WHEYVIP20 (-20%)</span>
+            </div>
+        </div>
+
+        <!-- Right: Summary & Checkout Buttons -->
+        <div class="cart-summary-box" style="flex-direction: column; align-items: stretch;">
+            <div class="coupon-breakdown">
+                <div class="breakdown-row">
+                    <span>Tạm tính ({{ cart|length }} món):</span>
+                    <strong>{{ cart.get_total_price|floatformat:0 }} VNĐ</strong>
+                </div>
+                {% if cart.coupon %}
+                <div class="breakdown-row discount-active">
+                    <span>
+                        Mã giảm giá <strong>{{ cart.coupon.code }}</strong> (-{{ cart.coupon.discount_percent }}%):
+                        <form action="{% url 'cart:coupon_remove' %}" method="post" style="display: inline;">
+                            {% csrf_token %}
+                            <input type="hidden" name="next" value="{% url 'cart:cart_detail' %}">
+                            <button type="submit" class="btn-remove-coupon">[Gỡ bỏ]</button>
+                        </form>
+                    </span>
+                    <strong>-{{ cart.get_discount|floatformat:0 }} VNĐ</strong>
+                </div>
+                {% endif %}
+            </div>
+
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 20px; padding-top: 14px; border-top: 1px solid var(--border-color);">
+                <div class="cart-total-info">
+                    <span class="cart-total-label">Tổng thanh toán:</span>
+                    <div class="cart-total-value">
+                        {{ cart.get_total_price_after_discount|floatformat:0 }}<span>VNĐ</span>
+                    </div>
+                </div>
+
+                <div class="cart-action-buttons">
+                    <a href="{% url 'shop:product_list' %}" class="btn-secondary btn-large">
+                        &larr; Tiếp tục mua hàng
+                    </a>
+                    <a href="{% url 'orders:order_create' %}" class="btn-buy btn-large">
+                        <span>Thanh toán ngay &rarr;</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+{% else %}
+    <!-- Empty Cart State -->
+    <div class="empty-box">
+        <div class="empty-icon">&#128722;</div>
+        <h3>Giỏ hàng của bạn đang trống</h3>
+        <p style="margin-bottom: 24px;">Hãy chọn ngay những hũ Whey Protein &amp; Pre-Workout chất lượng để phục hồi cơ bắp!</p>
+        <a href="{% url 'shop:product_list' %}" class="btn-buy btn-large">
+            <span>Khám phá sản phẩm ngay &rarr;</span>
+        </a>
+    </div>
+{% endif %}
+{% endblock %}

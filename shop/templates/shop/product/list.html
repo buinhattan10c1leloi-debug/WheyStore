@@ -1,0 +1,330 @@
+{% extends "shop/base.html" %}
+
+{% block title %}{% if category %}{{ category.name }} Chính Hãng Giá Tốt Nhất | WheyStore{% else %}WheyStore - Cửa Hàng Whey Protein Isolate, Hydrolyzed &amp; Pre-Workout Chính Hãng{% endif %}{% endblock %}
+
+{% block meta_description %}{% if category %}Mua {{ category.name }} nhập khẩu chính hãng 100% tại WheyStore. Cam kết tem xác thực đầy đủ, giá tốt nhất thị trường, tặng Bình Lắc Shaker + Freeship toàn quốc!{% else %}Hệ thống cửa hàng WheyStore chuyên phân phối Rule 1, ON Gold Standard, Dymatize ISO 100, Labrada Mass, C4 Pre-Workout &amp; OstroVit Creatine chính hãng 100%. Tặng Shaker + Freeship!{% endif %}{% endblock %}
+
+{% block canonical_url %}{{ request.scheme }}://{{ request.get_host }}{% if category %}{{ category.get_absolute_url }}{% else %}{% url 'shop:product_list' %}{% endif %}{% endblock %}
+
+{% block og_type %}website{% endblock %}
+{% block og_title %}{% if category %}{{ category.name }} Chính Hãng 100% | WheyStore{% else %}WheyStore - Thực Phẩm Bổ Sung Thể Hình Chính Hãng 100%{% endif %}{% endblock %}
+{% block og_description %}{% if category %}Danh mục {{ category.name }} chính hãng tại WheyStore. Tặng Bình Lắc Shaker + Freeship!{% else %}Khám phá 10+ sản phẩm Whey Protein Isolate, Hydrolyzed, Mass Gainer &amp; Pre-Workout bán chạy nhất Việt Nam tại WheyStore.{% endif %}{% endblock %}
+{% block og_url %}{{ request.scheme }}://{{ request.get_host }}{% if category %}{{ category.get_absolute_url }}{% else %}{% url 'shop:product_list' %}{% endif %}{% endblock %}
+
+{% block content %}
+<!-- Fitness Motivational Banner -->
+<section class="fitness-banner">
+    <div>
+        <h1>Xây Dựng Cơ Bắp <span>Đỉnh Cao</span></h1>
+        <p>Cam kết 100% sản phẩm Whey Protein Isolate, Hydrolyzed và Pre-Workout nhập khẩu chính hãng, phục hồi và phát triển cơ bắp tối ưu.</p>
+    </div>
+    <span class="banner-tag">&#9874; CHÍNH HÃNG 100%</span>
+</section>
+
+<!-- 1. CÔNG CỤ TÍNH MACRO & GỢI Ý WHEY (FITNESS CALCULATOR) -->
+<section class="macro-calculator-section" id="macro-calculator">
+    <div class="macro-calc-header">
+        <div>
+            <span class="macro-badge">&#9889; AI FITNESS COACH</span>
+            <h2>Công Cụ Tính Macro &amp; <span>Gợi Ý Whey</span></h2>
+            <p>Nhập chỉ số cơ thể của bạn để tính chính xác lượng Calories (TDEE), số gram Protein cần nạp mỗi ngày và nhận phác đồ thực phẩm bổ sung phù hợp nhất.</p>
+        </div>
+    </div>
+
+    <form id="macro-calc-form" class="macro-calc-grid" onsubmit="return false;">
+        <div class="form-group">
+            <label for="calc-gender">Giới tính</label>
+            <select id="calc-gender" class="fitness-select">
+                <option value="male" selected>Nam giới (Male)</option>
+                <option value="female">Nữ giới (Female)</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="calc-age">Độ tuổi (Năm)</label>
+            <input type="number" id="calc-age" class="fitness-input" value="23" min="14" max="80" required>
+        </div>
+
+        <div class="form-group">
+            <label for="calc-height">Chiều cao (cm)</label>
+            <input type="number" id="calc-height" class="fitness-input" value="173" min="130" max="220" required>
+        </div>
+
+        <div class="form-group">
+            <label for="calc-weight">Cân nặng (kg)</label>
+            <input type="number" id="calc-weight" class="fitness-input" value="70" min="35" max="180" required>
+        </div>
+
+        <div class="form-group">
+            <label for="calc-activity">Cường độ tập luyện</label>
+            <select id="calc-activity" class="fitness-select">
+                <option value="1.2">Ít vận động (Văn phòng)</option>
+                <option value="1.375">Tập nhẹ (1 - 3 buổi/tuần)</option>
+                <option value="1.55" selected>Tập vừa (3 - 5 buổi/tuần)</option>
+                <option value="1.725">Tập nặng (6 - 7 buổi/tuần)</option>
+                <option value="1.9">Vận động viên (2 buổi/ngày)</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="calc-goal">Mục tiêu thể hình</label>
+            <select id="calc-goal" class="fitness-select">
+                <option value="lean_bulk" selected>Tăng cơ nạc (Lean Bulk)</option>
+                <option value="cutting">Giảm mỡ siết cơ (Cutting)</option>
+                <option value="mass_gain">Tăng cân tăng cơ (Mass Gain)</option>
+            </select>
+        </div>
+
+        <div class="macro-calc-submit-col">
+            <button type="button" id="btn-analyze-macro" class="btn-buy btn-large" style="width: 100%; justify-content: center;">
+                <span>&#9889; Phân Tích Chỉ Số &amp; Gợi Ý Whey</span>
+            </button>
+        </div>
+    </form>
+
+    <!-- Kết quả phân tích Macro & Gợi ý sản phẩm -->
+    <div id="macro-results-box" class="macro-results-box" style="display: none;">
+        <div class="macro-metrics-grid">
+            <div class="macro-metric-card">
+                <span class="macro-metric-label">Năng Lượng Mục Tiêu (TDEE)</span>
+                <div class="macro-metric-num">
+                    <span id="res-calories">0</span> <small>kcal/ngày</small>
+                </div>
+                <span class="macro-metric-sub" id="res-goal-note">Chuẩn hóa theo mục tiêu của bạn</span>
+            </div>
+
+            <div class="macro-metric-card highlight-red">
+                <span class="macro-metric-label">Lượng Protein Cần Nạp</span>
+                <div class="macro-metric-num">
+                    <span id="res-protein">0</span> <small>g/ngày</small>
+                </div>
+                <span class="macro-metric-sub" id="res-protein-ratio">Tương đương ~2.2g Protein / kg cân nặng</span>
+            </div>
+
+            <div class="macro-metric-card">
+                <span class="macro-metric-label">Liều Dùng Whey Khuyến Nghị</span>
+                <div class="macro-metric-num">
+                    <span id="res-scoops">2</span> <small>muỗng/ngày</small>
+                </div>
+                <span class="macro-metric-sub">Cung cấp ngay ~50g Protein tinh khiết hấp thu nhanh</span>
+            </div>
+        </div>
+
+        <div class="macro-reco-banner">
+            <div class="macro-reco-title">
+                <span>&#127942; GỢI Ý COMBO TỐI ƯU CHO MỤC TIÊU CỦA BẠN:</span>
+                <p id="res-advice-message">Chỉ cần 2 muỗng mỗi ngày (sáng ngủ dậy &amp; ngay sau tập) để đạt mục tiêu Protein của bạn!</p>
+            </div>
+            <div id="macro-reco-products" class="macro-reco-grid"></div>
+        </div>
+    </div>
+</section>
+
+<!-- Embedded Catalog Data for Macro Calculator -->
+<script id="calc-catalog-data" type="application/json">
+    {{ calc_catalog_json|safe }}
+</script>
+
+<!-- Shop Layout: Sidebar + Grid -->
+<div class="shop-layout">
+    <!-- Category Sidebar -->
+    <aside class="sidebar">
+        <h2 class="sidebar-title">
+            <span>Danh Mục</span>
+            <span style="font-size: 0.8rem; color: var(--accent-red);">&#9660;</span>
+        </h2>
+        <ul class="category-list">
+            <li>
+                <a href="{% url 'shop:product_list' %}" class="category-link {% if not category %}active{% endif %}">
+                    Tất Cả Sản Phẩm
+                </a>
+            </li>
+            {% for c in categories %}
+            <li>
+                <a href="{{ c.get_absolute_url }}" class="category-link {% if category and category.id == c.id %}active{% endif %}">
+                    {{ c.name }}
+                </a>
+            </li>
+            {% endfor %}
+        </ul>
+
+        <!-- Quick Coupon Promo Box in Sidebar -->
+        <div class="sidebar-promo-box">
+            <span class="promo-tag">&#127873; MÃ GIẢM GIÁ HOT</span>
+            <div class="promo-code-item">
+                <code>GYMBRO10</code>
+                <span>Giảm 10%</span>
+            </div>
+            <div class="promo-code-item">
+                <code>WHEYVIP20</code>
+                <span>Giảm 20%</span>
+            </div>
+            <small>Nhập mã tại trang Giỏ hàng hoặc Thanh toán!</small>
+        </div>
+    </aside>
+
+    <!-- Product Grid Section -->
+    <section>
+        <div class="product-section-header">
+            <h2 class="section-title">
+                {% if category %}{{ category.name }}{% else %}Tất Cả Whey Protein{% endif %}
+            </h2>
+            <span class="product-count" id="live-product-count">{{ products|length }} sản phẩm có sẵn</span>
+        </div>
+
+        <!-- 2. Thanh Tìm Kiếm, Bộ Lọc Khoảng Giá & Sắp Xếp Trực Tiếp (Live Filter + GSAP Flip) -->
+        <div class="live-filter-toolbar" id="live-filter-bar">
+            <div class="filter-search-col">
+                <input type="text"
+                       id="live-search-input"
+                       value="{{ search_query }}"
+                       class="fitness-input"
+                       placeholder="&#128269; Tìm nhanh theo tên Whey, Thương hiệu hoặc mùi vị (VD: Rule 1, Dymatize, OstroVit, Chocolate)...">
+            </div>
+            <div class="filter-select-col">
+                <select id="live-price-filter" class="fitness-select">
+                    <option value="all" {% if price_range == 'all' %}selected{% endif %}>Mọi mức giá</option>
+                    <option value="under_1m" {% if price_range == 'under_1m' %}selected{% endif %}>Dưới 1.000.000đ</option>
+                    <option value="1m_to_1_8m" {% if price_range == '1m_to_1_8m' %}selected{% endif %}>1.000.000đ - 2.000.000đ</option>
+                    <option value="over_1_8m" {% if price_range == 'over_1_8m' %}selected{% endif %}>Trên 2.000.000đ</option>
+                </select>
+            </div>
+            <div class="filter-select-col">
+                <select id="live-sort-select" class="fitness-select">
+                    <option value="newest" {% if sort_by == 'newest' %}selected{% endif %}>Sắp xếp: Nổi bật nhất</option>
+                    <option value="price_asc" {% if sort_by == 'price_asc' %}selected{% endif %}>Giá: Thấp đến Cao</option>
+                    <option value="price_desc" {% if sort_by == 'price_desc' %}selected{% endif %}>Giá: Cao đến Thấp</option>
+                </select>
+            </div>
+        </div>
+
+        {% if products %}
+        <div class="product-grid" id="product-grid">
+            {% for product in products %}
+            <article class="product-card"
+                     data-id="{{ product.id }}"
+                     data-name="{{ product.name|lower }}"
+                     data-brand="{{ product.brand|lower }}"
+                     data-flavor="{{ product.flavor|lower }}"
+                     data-price="{{ product.price|floatformat:0 }}"
+                     data-created="{{ forloop.counter }}">
+                <!-- Image Box -->
+                <div class="card-image-box">
+                    <a href="{{ product.get_absolute_url }}" style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">
+                        {% if product.image %}
+                            <img src="{{ product.image.url }}" alt="{{ product.name }}" loading="lazy">
+                        {% else %}
+                            <div class="card-image-placeholder">
+                                <svg class="placeholder-tub-svg" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <rect x="30" y="12" width="60" height="14" rx="4" fill="#D33F49"/>
+                                    <rect x="34" y="26" width="52" height="6" fill="#181818"/>
+                                    <path d="M24 38C24 33.5817 27.5817 30 32 30H88C92.4183 30 96 33.5817 96 38V98C96 103.523 91.5228 108 86 108H34C28.4772 108 24 103.523 24 98V38Z" fill="#2A2A2A" stroke="#4A4A4A" stroke-width="2"/>
+                                    <rect x="25" y="46" width="70" height="44" fill="#161616"/>
+                                    <rect x="25" y="46" width="70" height="4" fill="#D33F49"/>
+                                    <rect x="25" y="86" width="70" height="4" fill="#D33F49"/>
+                                    <path d="M63 54L51 69H60L57 82L69 67H60L63 54Z" fill="#D33F49"/>
+                                </svg>
+                                <span class="placeholder-brand">100% {{ product.category.name }}</span>
+                                <span class="placeholder-text">{{ product.weight|default:"PRO SERIES" }}</span>
+                            </div>
+                        {% endif %}
+                    </a>
+
+                    <!-- Top-Left Category Badge -->
+                    <span class="badge-category">{{ product.category.name }}</span>
+
+                    <!-- Top-Right Red Discount Badge (-%) when old_price > price -->
+                    {% if product.old_price and product.old_price > product.price %}
+                        <span class="badge-discount-red">-{{ product.discount_percent }}%</span>
+                    {% elif product.weight %}
+                        <span class="badge-weight">{{ product.weight }}</span>
+                    {% endif %}
+                </div>
+
+                <!-- Card Body -->
+                <div class="card-content">
+                    <!-- Brand & Origin + Star Rating Row -->
+                    <div class="card-brand-origin-row">
+                        <span class="brand-badge">{{ product.brand|default:"WHEYSTORE PRO" }}</span>
+                        <span class="origin-badge">&#127758; {{ product.origin|default:"USA" }}</span>
+                    </div>
+
+                    <div class="card-rating-row">
+                        <span class="stars-gold">&#9733;&#9733;&#9733;&#9733;&#9733;</span>
+                        <span class="rating-score">{{ product.average_rating }}</span>
+                        <span class="rating-count">({{ product.review_count }} đánh giá)</span>
+                    </div>
+
+                    <h3 class="product-title">
+                        <a href="{{ product.get_absolute_url }}">{{ product.name }}</a>
+                    </h3>
+
+                    <!-- Quick Supplement Specs Strip (e.g. 25g Protein • 76 Servings) -->
+                    <div class="card-quick-specs">
+                        {% if product.protein_per_serving and product.protein_per_serving != "0g" %}
+                            <span class="quick-spec-pill highlight">{{ product.protein_per_serving }} Protein</span>
+                        {% elif product.bcaa_per_serving %}
+                            <span class="quick-spec-pill highlight">{{ product.bcaa_per_serving }}</span>
+                        {% endif %}
+                        {% if product.servings %}
+                            <span class="quick-spec-pill">{{ product.servings }}</span>
+                        {% endif %}
+                        {% if product.calories %}
+                            <span class="quick-spec-pill">{{ product.calories }}</span>
+                        {% endif %}
+                    </div>
+
+                    <div class="product-meta">
+                        <span>Vị:</span>
+                        <span class="flavor-pill">{{ product.flavor|default:"Tiêu chuẩn" }}</span>
+                        {% if product.weight %}
+                            <span class="weight-inline-tag">{{ product.weight }}</span>
+                        {% endif %}
+                    </div>
+
+                    <!-- Free Gift Strip -->
+                    <div class="card-free-gift">
+                        &#127873; {{ product.free_gift|default:"Tặng Bình Lắc Shaker + Freeship" }}
+                    </div>
+
+                    <!-- Card Footer: New Price + Old Price Crossed Out & Add to Cart Form -->
+                    <div class="card-footer">
+                        <div class="price-stack">
+                            <div class="price-tag">
+                                {{ product.price|floatformat:0 }}<span class="price-currency">đ</span>
+                            </div>
+                            {% if product.old_price and product.old_price > product.price %}
+                                <del class="old-price-tag">{{ product.old_price|floatformat:0 }}đ</del>
+                            {% endif %}
+                        </div>
+                        <form action="{% url 'cart:cart_add' product.id %}" method="post" class="card-cart-form">
+                            {% csrf_token %}
+                            <input type="hidden" name="quantity" value="1">
+                            {{ cart_product_form.override }}
+                            <button type="submit" class="btn-buy">
+                                <span>&#128722; Mua Ngay</span>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </article>
+            {% endfor %}
+        </div>
+
+        <!-- Empty Filter State (Hidden by default, shown when live filter has 0 matches) -->
+        <div id="live-filter-empty" class="empty-box" style="display: none; margin-top: 16px;">
+            <div class="empty-icon">&#128269;</div>
+            <h3>Không tìm thấy sản phẩm phù hợp với bộ lọc</h3>
+            <p>Hãy thử từ khóa khác hoặc chọn "Mọi mức giá" để xem toàn bộ sản phẩm.</p>
+        </div>
+        {% else %}
+        <!-- Empty State -->
+        <div class="empty-box">
+            <div class="empty-icon">&#128230;</div>
+            <h3>Hiện chưa có sản phẩm nào trong danh mục này</h3>
+            <p>Vui lòng quay lại sau hoặc truy cập trang quản trị để thêm sản phẩm.</p>
+        </div>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}
