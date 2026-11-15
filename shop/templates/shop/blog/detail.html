@@ -1,0 +1,55 @@
+{% extends "shop/base.html" %}
+
+{% block title %}{{ post.meta_title|default:post.title }} | WheyStore{% endblock %}
+{% block meta_description %}{{ post.meta_description|default:post.excerpt|truncatechars:160 }}{% endblock %}
+
+{% block structured_data %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Article",
+  "headline": "{{ post.title|escapejs }}",
+  "description": "{{ post.meta_description|default:post.excerpt|truncatechars:160|escapejs }}",
+  "datePublished": "{{ post.created_at|date:'c' }}",
+  "dateModified": "{{ post.updated_at|date:'c' }}",
+  "publisher": {
+    "@type": "Organization",
+    "name": "WheyStore"
+  }
+}
+</script>
+{% endblock %}
+
+{% block content %}
+<nav class="breadcrumbs">
+    <a href="{% url 'shop:product_list' %}">Trang Chủ</a>
+    <span class="separator">/</span>
+    <a href="{% url 'shop:blog_list' %}">Kiến Thức Gym</a>
+    <span class="separator">/</span>
+    <span class="current">{{ post.title }}</span>
+</nav>
+
+<article class="checkout-card" style="max-width: 860px; margin: 0 auto;">
+    <h1 style="font-size: 1.8rem; margin-bottom: 10px;">{{ post.title }}</h1>
+    <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 20px;">
+        Đăng ngày {{ post.created_at|date:"d/m/Y" }}
+    </div>
+    <div style="line-height: 1.75; color: var(--text-secondary); white-space: pre-line;">
+        {{ post.content }}
+    </div>
+
+    {% if post.related_products.all %}
+    <div style="margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--border-color);">
+        <h3 style="margin-bottom: 12px;">&#9889; Sản Phẩm Gợi Ý Trong Bài Viết</h3>
+        <div class="product-grid">
+            {% for rp in post.related_products.all %}
+            <div class="product-card" style="padding: 14px;">
+                <a href="{{ rp.get_absolute_url }}" style="font-weight: 800; display: block; margin-bottom: 6px;">{{ rp.name }}</a>
+                <strong style="color: var(--accent-red);">{{ rp.price|floatformat:0 }}đ</strong>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</article>
+{% endblock %}

@@ -87,6 +87,16 @@ def coupon_apply(request):
         try:
             coupon = Coupon.objects.get(code__iexact=code)
             ok, err_msg = coupon.validate_for_order(cart.get_total_price())
+            if ok and coupon.first_order_only:
+                from orders.models import Order
+                has_prior = (
+                    Order.objects.filter(user=request.user).exists()
+                    if request.user.is_authenticated
+                    else bool(request.session.get('recent_order_ids'))
+                )
+                if has_prior:
+                    ok = False
+                    err_msg = "Mã này chỉ áp dụng cho đơn hàng đầu tiên."
             if ok:
                 request.session['coupon_id'] = coupon.id
                 messages.success(
@@ -123,6 +133,34 @@ def cart_detail(request):
         item['update_quantity_form'] = CartAddProductForm(
             initial={'quantity': item['quantity'], 'override': True}
         )
+
+    # Tự động áp dụng mã giảm giá lần đầu (nếu có) cho khách mới chưa dùng mã
+    if items and not request.session.get('coupon_id'):
+        from orders.models import Order
+        has_prior = (
+            Order.objects.filter(user=request.user).exists()
+            if request.user.is_authenticated
+            else bool(request.session.get('recent_order_ids'))
+        )
+        if not has_prior:
+            first_coupon = Coupon.objects.filter(active=True, first_order_only=True).first()
+            if first_coupon:
+                ok, _ = first_coupon.validate_for_order(cart.get_total_price())
+                if ok:
+                    request.session['coupon_id'] = first_coupon.id
+                    messages.info(request, f"Tự động áp dụng mã khách mới '{first_coupon.code}' (-{first_coupon.discount_percent}%)!")
+
+    # Thanh Mua kèm (Upsell): gợi ý Creatine / Pre-workout / phụ kiện khi giỏ hàng chưa có
+    cart_product_ids = [item['product'].id for item in items]
+    upsell_products = []
+    if cart_product_ids:
+        from django.db.models import Q
+        upsell_products = list(
+            Product.objects.filter(available=True, stock__gt=0)
+            .exclude(id__in=cart_product_ids)
+            .filter(Q(name__icontains='creatine') | Q(name__icontains='shaker') | Q(name__icontains='c4') | Q(category__slug__icontains='creatine'))[:3]
+        )
+
     coupon_apply_form = CouponApplyForm()
     return render(
         request,
@@ -130,5 +168,6 @@ def cart_detail(request):
         {
             'cart': cart,
             'coupon_apply_form': coupon_apply_form,
+            'upsell_products': upsell_products,
         }
     )

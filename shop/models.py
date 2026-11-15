@@ -239,6 +239,31 @@ class WishlistItem(models.Model):
         return f"{self.user} - {self.product.name}"
 
 
+class Post(models.Model):
+    title = models.CharField(max_length=255, verbose_name="Tiêu đề bài viết")
+    slug = models.SlugField(max_length=255, unique=True)
+    cover_image = models.ImageField(upload_to='blog/%Y/%m/%d', blank=True, null=True, verbose_name="Ảnh bìa")
+    excerpt = models.TextField(blank=True, verbose_name="Tóm tắt ngắn")
+    content = models.TextField(verbose_name="Nội dung bài viết")
+    meta_title = models.CharField(max_length=255, blank=True, verbose_name="SEO Title")
+    meta_description = models.CharField(max_length=320, blank=True, verbose_name="SEO Description")
+    related_products = models.ManyToManyField(Product, blank=True, related_name='blog_posts', verbose_name="Sản phẩm liên kết")
+    published = models.BooleanField(default=True, verbose_name="Xuất bản")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Bài viết kiến thức'
+        verbose_name_plural = 'Bài viết kiến thức'
+
+    def __str__(self):
+        return self.title
+
+    def get_absolute_url(self):
+        return reverse('shop:blog_detail', args=[self.slug])
+
+
 class Review(models.Model):
     RATING_CHOICES = [(i, f'{i} Sao') for i in range(1, 6)]
 

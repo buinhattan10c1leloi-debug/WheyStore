@@ -164,6 +164,30 @@
             </div>
         </div>
     </div>
+
+    {% if upsell_products %}
+    <div class="checkout-card" style="margin-top: 24px;">
+        <h3 class="checkout-section-title" style="margin-bottom: 14px; font-size: 1.05rem;">
+            <span>&#9889; Mua Kèm Gợi Ý (Tối Ưu Hiệu Quả Tập Luyện)</span>
+        </h3>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px;">
+            {% for up in upsell_products %}
+            <div style="padding: 14px; background: var(--bg-surface-elevated); border: 1px solid var(--border-color); border-radius: 8px; display: flex; flex-direction: column; justify-content: space-between; gap: 10px;">
+                <div>
+                    <a href="{{ up.get_absolute_url }}" style="font-weight: 700; display: block; margin-bottom: 4px;">{{ up.name }}</a>
+                    <strong style="color: var(--accent-red);">{{ up.price|floatformat:0 }}đ</strong>
+                </div>
+                <form action="{% url 'cart:cart_add' up.id %}" method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="quantity" value="1">
+                    <input type="hidden" name="override" value="False">
+                    <button type="submit" class="btn-buy" style="width: 100%; justify-content: center; padding: 8px 12px;">+ Thêm vào giỏ</button>
+                </form>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
 {% else %}
     <!-- Empty Cart State -->
     <div class="empty-box">

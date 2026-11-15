@@ -16,7 +16,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.core.cache import cache
-from .models import Category, Product, Bundle, WishlistItem
+from .models import Category, Product, Bundle, WishlistItem, Post
 from .forms import ReviewForm
 from cart.cart import Cart
 from cart.forms import CartAddProductForm
@@ -374,6 +374,76 @@ def compare_view(request):
     ids = request.session.get('compare', [])[:3]
     products = list(Product.objects.filter(id__in=ids, available=True))
     return render(request, 'shop/compare.html', {'products': products})
+
+
+def blog_list(request):
+    posts = Post.objects.filter(published=True).prefetch_related('related_products')
+    return render(request, 'shop/blog/list.html', {'posts': posts})
+
+
+def blog_detail(request, slug):
+    post = get_object_or_404(Post.objects.prefetch_related('related_products'), slug=slug, published=True)
+    return render(request, 'shop/blog/detail.html', {'post': post})
+
+
+STATIC_PAGES = {
+    'gioi-thieu': {
+        'title': 'Giới Thiệu WheyStore',
+        'subtitle': 'Hệ thống dinh dưỡng thể hình chính hãng hàng đầu Việt Nam',
+        'paragraphs': [
+            'WheyStore chuyên cung cấp Whey Protein, Mass Gainer, Pre-Workout và Creatine nhập khẩu chính hãng từ USA & EU với đầy đủ tem xác thực.',
+            'Sứ mệnh của chúng tôi là giúp cộng đồng Gymer Việt Nam tiếp cận nguồn dinh dưỡng sạch, minh bạch thành phần và giao hàng siêu tốc toàn quốc.',
+        ],
+    },
+    'chinh-sach-doi-tra': {
+        'title': 'Chính Sách Đổi Trả & Hoàn Tiền',
+        'subtitle': 'Cam kết 100% chính hãng — Đổi trả miễn phí trong 7 ngày',
+        'paragraphs': [
+            'Sản phẩm được đổi trả miễn phí trong vòng 7 ngày nếu còn nguyên tem niêm phong, hoặc phát hiện lỗi từ nhà sản xuất / hư hỏng do vận chuyển.',
+            'Hoàn tiền 200% nếu phát hiện hàng giả, hàng kém chất lượng.',
+        ],
+    },
+    'chinh-sach-bao-mat': {
+        'title': 'Chính Sách Bảo Mật Thông Tin',
+        'subtitle': 'An toàn dữ liệu khách hàng là ưu tiên số 1 tại WheyStore',
+        'paragraphs': [
+            'Mọi thông tin cá nhân (Họ tên, SĐT, địa chỉ, lịch sử đơn hàng) chỉ được sử dụng cho mục đích giao hàng, chăm sóc khách hàng và bảo hành sản phẩm.',
+            'WheyStore tuyệt đối không chia sẻ hoặc bán dữ liệu khách hàng cho bên thứ ba.',
+        ],
+    },
+}
+
+
+def static_page(request, page_slug):
+    from django.http import Http404
+    page = STATIC_PAGES.get(page_slug)
+    if not page:
+        raise Http404("Trang không tồn tại")
+    return render(request, 'shop/pages/static.html', {'page': page})
+
+
+def contact_page(request):
+    from django.conf import settings
+    from django.core.mail import send_mail
+
+    if request.method == 'POST':
+        name = request.POST.get('name', '').strip()
+        email = request.POST.get('email', '').strip()
+        message_text = request.POST.get('message', '').strip()
+        if len(name) < 2 or len(message_text) < 5:
+            messages.error(request, "Vui lòng nhập đầy đủ họ tên và nội dung liên hệ.")
+        else:
+            recipient = getattr(settings, 'OWNER_NOTIFY_EMAIL', '') or getattr(settings, 'DEFAULT_FROM_EMAIL', 'no-reply@wheystore.vn')
+            send_mail(
+                subject=f"[WheyStore Liên Hệ] Từ {name}",
+                message=f"Người gửi: {name}\nEmail: {email}\n\nNội dung:\n{message_text}",
+                from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'no-reply@wheystore.vn'),
+                recipient_list=[recipient],
+                fail_silently=True,
+            )
+            messages.success(request, "Cảm ơn bạn! Tin nhắn liên hệ đã được gửi tới đội ngũ WheyStore.")
+            return redirect('shop:contact')
+    return render(request, 'shop/pages/contact.html')
 
 
 # ==============================================================================

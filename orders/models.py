@@ -27,6 +27,7 @@ class Coupon(models.Model):
         verbose_name="Số lượt dùng tối đa (0 = không giới hạn)"
     )
     used_count = models.PositiveIntegerField(default=0, verbose_name="Đã sử dụng")
+    first_order_only = models.BooleanField(default=False, verbose_name="Chỉ dành cho đơn hàng đầu tiên")
     active = models.BooleanField(default=True, verbose_name="Đang kích hoạt")
     created = models.DateTimeField(auto_now_add=True, verbose_name="Ngày tạo")
 

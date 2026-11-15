@@ -124,6 +124,9 @@
                     {% endwith %}
                 </li>
                 <li class="nav-item">
+                    <a href="{% url 'shop:blog_list' %}" class="nav-link">&#128218; Kiến thức</a>
+                </li>
+                <li class="nav-item">
                     <a href="{% url 'shop:wishlist' %}" class="nav-link">&#10084; Yêu thích</a>
                 </li>
                 <li class="nav-item">
@@ -161,6 +164,13 @@
             <p class="footer-slogan">
                 Thương hiệu dinh dưỡng thể hình hàng đầu &bull; 100% Chính Hãng &bull; Bứt Phá Sức Mạnh Vượt Trội
             </p>
+            <div style="display: flex; justify-content: center; gap: 18px; flex-wrap: wrap; margin: 10px 0; font-size: 0.85rem;">
+                <a href="{% url 'shop:static_page' 'gioi-thieu' %}">Giới thiệu</a>
+                <a href="{% url 'shop:static_page' 'chinh-sach-doi-tra' %}">Chính sách đổi trả</a>
+                <a href="{% url 'shop:static_page' 'chinh-sach-bao-mat' %}">Chính sách bảo mật</a>
+                <a href="{% url 'shop:contact' %}">Liên hệ</a>
+                <a href="{% url 'shop:blog_list' %}">Kiến thức Gym</a>
+            </div>
             <div class="footer-bottom">
                 &copy; 2026 WheyStore Inc. All rights reserved. Thiết kế dành riêng cho Gymer &amp; Fitness Athletes.
             </div>

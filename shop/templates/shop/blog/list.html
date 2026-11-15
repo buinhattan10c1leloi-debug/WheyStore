@@ -1,0 +1,37 @@
+{% extends "shop/base.html" %}
+
+{% block title %}Kiến Thức Tập Gym &amp; Dinh Dưỡng | WheyStore{% endblock %}
+
+{% block content %}
+<div class="cart-page-header">
+    <h1 class="cart-page-title">
+        <span>&#128218; Kiến Thức</span>
+        <span class="accent">Tập Gym</span>
+    </h1>
+    <a href="{% url 'shop:product_list' %}" class="btn-secondary" style="padding: 8px 16px; border-radius: 6px; font-size: 0.85rem; font-weight: 700;">
+        &larr; Trang chủ
+    </a>
+</div>
+
+{% if posts %}
+<div class="product-grid">
+    {% for post in posts %}
+    <article class="product-card" style="padding: 20px;">
+        <h2 style="font-size: 1.15rem; margin-bottom: 8px;">
+            <a href="{{ post.get_absolute_url }}">{{ post.title }}</a>
+        </h2>
+        <p style="font-size: 0.88rem; color: var(--text-secondary); margin-bottom: 12px;">
+            {{ post.excerpt|default:post.content|truncatewords:25 }}
+        </p>
+        <a href="{{ post.get_absolute_url }}" class="btn-buy" style="align-self: flex-start; padding: 7px 14px; font-size: 0.82rem;">Đọc tiếp &rarr;</a>
+    </article>
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty-box">
+    <div class="empty-icon">&#128218;</div>
+    <h3>Chưa có bài viết nào</h3>
+    <p>Các bài hướng dẫn dinh dưỡng và lịch tập sẽ sớm được cập nhật!</p>
+</div>
+{% endif %}
+{% endblock %}

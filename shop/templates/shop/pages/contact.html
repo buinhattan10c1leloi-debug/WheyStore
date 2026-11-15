@@ -1,0 +1,26 @@
+{% extends "shop/base.html" %}
+
+{% block title %}Liên Hệ WheyStore | WheyStore{% endblock %}
+
+{% block content %}
+<div class="checkout-card" style="max-width: 640px; margin: 0 auto;">
+    <h1 style="font-size: 1.75rem; margin-bottom: 8px;">&#128233; Liên Hệ WheyStore</h1>
+    <p style="color: var(--text-secondary); margin-bottom: 18px;">Cần tư vấn chọn Whey hoặc hỗ trợ đơn hàng? Gửi tin nhắn cho chúng tôi!</p>
+    <form method="post">
+        {% csrf_token %}
+        <div class="form-group">
+            <label>Họ và tên <span class="req">*</span></label>
+            <input type="text" name="name" class="fitness-input" required>
+        </div>
+        <div class="form-group">
+            <label>Email</label>
+            <input type="email" name="email" class="fitness-input">
+        </div>
+        <div class="form-group">
+            <label>Nội dung <span class="req">*</span></label>
+            <textarea name="message" rows="4" class="fitness-input" required></textarea>
+        </div>
+        <button type="submit" class="btn-buy btn-large" style="width: 100%; justify-content: center;">Gửi Liên Hệ</button>
+    </form>
+</div>
+{% endblock %}

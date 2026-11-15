@@ -114,3 +114,48 @@ class Phase5AExperienceTests(TestCase):
         self.assertIn(self.p1.id, self.client.session.get('recently_viewed', []))
         resp = self.client.get(reverse('shop:product_list'), {'brand': 'Rule 1', 'goal': 'lean_bulk', 'in_stock': '1'})
         self.assertEqual(list(resp.context['products']), [self.p1])
+
+
+class Phase5CContentAndGrowthTests(TestCase):
+    def setUp(self):
+        self.cat = Category.objects.create(name='Whey Isolate', slug='whey-iso-5c')
+        self.whey = Product.objects.create(
+            category=self.cat, name='Rule 1 Whey', slug='rule-1-whey',
+            price=Decimal('1950000'), stock=10, available=True
+        )
+        self.creatine = Product.objects.create(
+            category=self.cat, name='OstroVit Creatine', slug='ostrovit-creatine-5c',
+            price=Decimal('450000'), stock=10, available=True
+        )
+
+    def test_blog_list_detail_and_jsonld(self):
+        from shop.models import Post
+        post = Post.objects.create(
+            title='Huong dan uong Whey', slug='huong-dan-uong-whey',
+            content='Uong sau tap 30 phut.', published=True
+        )
+        post.related_products.add(self.whey)
+        r_list = self.client.get(reverse('shop:blog_list'))
+        self.assertContains(r_list, 'Huong dan uong Whey')
+        r_det = self.client.get(post.get_absolute_url())
+        self.assertContains(r_det, '"@type": "Article"')
+        self.assertContains(r_det, 'Rule 1 Whey')
+
+    def test_static_and_contact_pages(self):
+        from django.core import mail
+        self.assertEqual(self.client.get(reverse('shop:static_page', args=['gioi-thieu'])).status_code, 200)
+        self.assertEqual(self.client.get(reverse('shop:static_page', args=['chinh-sach-doi-tra'])).status_code, 200)
+        self.assertEqual(self.client.get(reverse('shop:static_page', args=['chinh-sach-bao-mat'])).status_code, 200)
+        resp = self.client.post(reverse('shop:contact'), {
+            'name': 'Gymer A', 'email': 'gymer@example.com', 'message': 'Tu van giup minh voi!'
+        })
+        self.assertRedirects(resp, reverse('shop:contact'))
+        self.assertEqual(len(mail.outbox), 1)
+
+    def test_first_order_auto_coupon_and_upsell(self):
+        from orders.models import Coupon
+        Coupon.objects.create(code='WELCOME10', discount_percent=10, first_order_only=True, active=True)
+        self.client.post(reverse('cart:cart_add', args=[self.whey.id]), {'quantity': 1, 'override': False})
+        resp = self.client.get(reverse('cart:cart_detail'))
+        self.assertContains(resp, 'WELCOME10')
+        self.assertContains(resp, 'OstroVit Creatine')
